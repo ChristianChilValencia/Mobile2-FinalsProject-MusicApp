@@ -1,0 +1,30 @@
+ion-card {
+  margin: 16px;
+  border-radius: 10px;
+  
+  ion-card-header {
+    padding-bottom: 8px;
+  }
+}
+
+ion-button {
+  margin: 8px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  
+  ion-icon {
+    font-size: 24px;
+  }
+}
+
+.now-playing-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 16px 0;
+}
+
+ion-spinner {
+  margin: 10px auto;
+  display: block;
+}

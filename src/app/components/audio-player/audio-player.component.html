@@ -1,3 +1,38 @@
-<p>
-  audio-player works!
-</p>
+<div class="audio-player-container">
+  <!-- Track progress -->
+  <ion-range
+    *ngIf="showFullControls"
+    [disabled]="isStopped"
+    [max]="duration"
+    [value]="currentTime"
+    (ionChange)="onSeek($event)"
+    mode="md"
+    color="primary">
+    <ion-label slot="start">{{ formatTime(currentTime) }}</ion-label>
+    <ion-label slot="end">{{ formatTime(duration) }}</ion-label>
+  </ion-range>
+
+  <!-- Playback controls -->
+  <div class="controls-container">
+    <ion-button 
+      [disabled]="isStopped"
+      fill="clear" 
+      (click)="stop()">
+      <ion-icon name="stop-outline"></ion-icon>
+    </ion-button>
+    
+    <ion-button 
+      [disabled]="isStopped && !isPaused" 
+      fill="clear"
+      size="large"
+      (click)="togglePlayPause()">
+      <ion-icon *ngIf="isPlaying" name="pause-outline"></ion-icon>
+      <ion-icon *ngIf="!isPlaying" name="play-outline"></ion-icon>
+    </ion-button>
+  </div>
+  
+  <!-- Loading indicator -->
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-spinner name="dots"></ion-spinner>
+  </div>
+</div>

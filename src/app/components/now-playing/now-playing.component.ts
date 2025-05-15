@@ -5,10 +5,9 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './now-playing.component.html',
   styleUrls: ['./now-playing.component.scss'],
 })
-export class NowPlayingComponent  implements OnInit {
+export class NowPlayingComponent implements OnInit {
 
-  constructor() { }
+  constructor() {}
 
   ngOnInit() {}
-
 }

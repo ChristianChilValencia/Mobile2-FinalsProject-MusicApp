@@ -1,3 +1,27 @@
-<p>
-  song-list works!
-</p>
+<ion-list>
+  <ion-list-header>
+    <ion-label>Available Tracks</ion-label>
+  </ion-list-header>
+
+  <ion-item *ngIf="audioFiles.length === 0">
+    <ion-label>
+      <ion-text color="medium">No audio files found</ion-text>
+    </ion-label>
+  </ion-item>
+  
+  <ion-item *ngFor="let file of audioFiles" 
+    button 
+    (click)="playFile(file)"
+    [color]="currentFile?.id === file.id ? 'light' : ''"
+    >
+    <ion-label>
+      <h2>{{ file.title }}</h2>
+      <p>{{ file.artist }}{{ file.album ? ' • ' + file.album : '' }}</p>
+    </ion-label>
+    
+    <ion-note slot="end" *ngIf="currentFile?.id === file.id">
+      <ion-icon *ngIf="isPlaying" name="volume-high-outline" color="primary"></ion-icon>
+      <ion-icon *ngIf="isPaused" name="pause-outline" color="medium"></ion-icon>
+    </ion-note>
+  </ion-item>
+</ion-list>

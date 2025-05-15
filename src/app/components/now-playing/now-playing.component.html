@@ -1,3 +1,20 @@
-<p>
-  now-playing works!
-</p>
+<ion-grid>
+  <ion-row>
+    <ion-col size="12" size-md="6">
+      <!-- Metadata display and controls -->
+      <app-metadata-display></app-metadata-display>
+      
+      <ion-card>
+        <ion-card-content>
+          <!-- Audio Player Component -->
+          <app-audio-player></app-audio-player>
+        </ion-card-content>
+      </ion-card>
+    </ion-col>
+    
+    <ion-col size="12" size-md="6">
+      <!-- Song List Component -->
+      <app-song-list></app-song-list>
+    </ion-col>
+  </ion-row>
+</ion-grid>

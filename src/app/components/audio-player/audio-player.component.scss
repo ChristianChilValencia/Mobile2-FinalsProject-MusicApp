@@ -1,0 +1,26 @@
+.audio-player-container {
+  padding: 10px;
+}
+
+.controls-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  
+  ion-button {
+    --padding-start: 12px;
+    --padding-end: 12px;
+    
+    ion-icon {
+      font-size: 24px;
+    }
+  }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+}

@@ -8,8 +8,8 @@ const routes: Routes = [
     path: 'tabs',
     component: TabsPage,
     children: [      {
-        path: 'local',
-        loadChildren: () => import('../local/local.routes').then(m => m.routes)
+    path: 'local',
+    loadChildren: () => import('../local/local.module').then(m => m.LocalPageModule)
       },
       {
         path: 'playlists',

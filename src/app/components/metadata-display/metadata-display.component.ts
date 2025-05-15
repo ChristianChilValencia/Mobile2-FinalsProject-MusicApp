@@ -2,15 +2,12 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AudioFile } from '../../services/local/file.service';
 import { LocalAudioService } from '../../services/local/local-audio.service';
-import { IonicModule } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-metadata-display',
   templateUrl: './metadata-display.component.html',
   styleUrls: ['./metadata-display.component.scss'],
-  standalone: true,
-  imports: [IonicModule, CommonModule]
+  standalone: false
 })
 export class MetadataDisplayComponent implements OnInit, OnDestroy {
   currentFile: AudioFile | null = null;

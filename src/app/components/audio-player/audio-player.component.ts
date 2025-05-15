@@ -1,15 +1,11 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { LocalAudioService, PlaybackState } from '../../services/local/local-audio.service';
-import { IonicModule } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-audio-player',
   templateUrl: './audio-player.component.html',
   styleUrls: ['./audio-player.component.scss'],
-  standalone: true,
-  imports: [IonicModule, CommonModule, FormsModule]
+  standalone: false
 })
 export class AudioPlayerComponent implements OnInit {
   @Input() showFullControls = true;

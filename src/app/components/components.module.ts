@@ -9,14 +9,22 @@ import { MetadataDisplayComponent } from './metadata-display/metadata-display.co
 import { SongListComponent } from './song-list/song-list.component';
 
 @NgModule({
+  declarations: [
+    NowPlayingComponent,
+    AudioPlayerComponent,
+    MetadataDisplayComponent,
+    SongListComponent
+  ],
   imports: [
     CommonModule,
     IonicModule,
-    FormsModule,
-    NowPlayingComponent
+    FormsModule
   ],
   exports: [
-    NowPlayingComponent
+    NowPlayingComponent,
+    AudioPlayerComponent,
+    MetadataDisplayComponent,
+    SongListComponent
   ]
 })
 export class ComponentsModule { }

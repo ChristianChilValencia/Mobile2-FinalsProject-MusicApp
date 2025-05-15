@@ -1,10 +1,17 @@
-// This file is no longer needed as we're using standalone components
-// Keep it empty to avoid import errors
 import { NgModule } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Routes, RouterModule } from '@angular/router';
+
+import { LocalPage } from './local.page';
+
+const routes: Routes = [
+  {
+    path: '',
+    component: LocalPage
+  }
+];
 
 @NgModule({
-  imports: [RouterModule],
+  imports: [RouterModule.forChild(routes)],
   exports: [RouterModule],
 })
 export class LocalPageRoutingModule {}

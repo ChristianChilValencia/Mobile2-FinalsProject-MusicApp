@@ -2,15 +2,12 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AudioFile, FileService } from '../../services/local/file.service';
 import { LocalAudioService, PlaybackState } from '../../services/local/local-audio.service';
-import { IonicModule } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-song-list',
   templateUrl: './song-list.component.html',
   styleUrls: ['./song-list.component.scss'],
-  standalone: true,
-  imports: [IonicModule, CommonModule]
+  standalone: false
 })
 export class SongListComponent implements OnInit, OnDestroy {
   audioFiles: AudioFile[] = [];

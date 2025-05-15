@@ -1,22 +1,8 @@
+// This file is no longer needed as we're using standalone components
+// Keep it empty to avoid import errors
 import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-
-import { IonicModule } from '@ionic/angular';
-
-import { LocalPageRoutingModule } from './local-routing.module';
-import { ComponentsModule } from '../components/components.module';
-
-import { LocalPage } from './local.page';
 
 @NgModule({
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    LocalPageRoutingModule,
-    ComponentsModule
-  ],
-  declarations: [LocalPage]
+  imports: []
 })
 export class LocalPageModule {}

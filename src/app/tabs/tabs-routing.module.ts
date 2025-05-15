@@ -7,10 +7,9 @@ const routes: Routes = [
   {
     path: 'tabs',
     component: TabsPage,
-    children: [
-      {
+    children: [      {
         path: 'local',
-        loadChildren: () => import('../local/local.module').then(m => m.LocalPageModule)
+        loadChildren: () => import('../local/local.routes').then(m => m.routes)
       },
       {
         path: 'playlists',

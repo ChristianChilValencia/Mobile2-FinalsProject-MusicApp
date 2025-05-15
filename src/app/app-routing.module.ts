@@ -5,9 +5,6 @@ const routes: Routes = [
   {
     path: '',
     loadChildren: () => import('./tabs/tabs.module').then(m => m.TabsPageModule)
-  },  {
-    path: 'local',
-    loadChildren: () => import('./local/local.module').then( m => m.LocalPageModule)
   },
   {
     path: 'stream',

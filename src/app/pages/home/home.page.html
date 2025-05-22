@@ -1,30 +1,14 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>VibeFlow</ion-title>
-      <ion-button slot="end" (click)="navigateToLocalAudio()" color="primary">
+      <ion-button slot="end" (click)="navigateToLocalAudio()" fill="clear">
         <ion-icon name="cloud-upload"></ion-icon>
       </ion-button>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <div class="content-container">
-    <!-- Mode toggle -->
-    <div class="mode-toggle">
-      <ion-segment [(ngModel)]="currentMode" (ionChange)="modeChanged()">
-        <ion-segment-button value="all">
-          <ion-label>All Music</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="local">
-          <ion-label>Local</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="streaming">
-          <ion-label>Streaming</ion-label>
-        </ion-segment-button>
-      </ion-segment>
-    </div>
-
-    <!-- Recently played section -->
+  <div class="content-container">    <!-- Recently played section -->
     <section class="music-section" *ngIf="recentlyPlayed && recentlyPlayed.length > 0">
       <h2>Recently Played</h2>
       <div class="horizontal-scroll">

@@ -1,191 +1,21 @@
-.player-container {
-  padding: 24px 16px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  
-  .cover-art-container {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    max-height: 360px;
-    margin-bottom: 24px;
-    
-    .cover-art {
-      width: 100%;
-      max-width: 300px;
-      height: auto;
-      aspect-ratio: 1 / 1;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-      transition: transform 0.3s ease;
-      
-      &.rotate {
-        animation: rotateAnimation 20s linear infinite;
-      }
-      
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-    }
-  }
-  
-  .track-info {
-    text-align: center;
-    margin-bottom: 24px;
-    
-    .title {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    
-    .artist {
-      font-size: 18px;
-      color: var(--ion-color-medium);
-      margin-bottom: 4px;
-    }
-    
-    .album {
-      font-size: 14px;
-      color: var(--ion-color-medium-shade);
-    }
-  }
-  
-  .seek-controls {
-    margin-bottom: 24px;
-    
-    .time-display {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: var(--ion-color-medium);
-      margin-bottom: 4px;
-    }
-    
-    .seek-bar {
-      --bar-height: 3px;
-      --bar-background: var(--ion-color-medium-tint);
-      --bar-background-active: var(--ion-color-primary);
-      --knob-background: var(--ion-color-primary);
-      --knob-size: 12px;
-    }
-  }
-  
-  .playback-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 32px;
-    
-    .control-button {
-      --padding-start: 8px;
-      --padding-end: 8px;
-      height: 48px;
-      
-      &.play-button {
-        --padding-start: 12px;
-        --padding-end: 12px;
-        height: 64px;
-        width: 64px;
-        margin: 0 16px;
-        
-        ion-icon {
-          font-size: 32px;
-        }
-      }
-      
-      &.shuffle, &.repeat {
-        --color: var(--ion-color-medium);
-      }
-      
-      ion-icon {
-        font-size: 24px;
-      }
-    }
-  }
-  
-  .volume-controls {
-    display: flex;
-    align-items: center;
-    margin-bottom: 32px;
-    
-    ion-icon {
-      color: var(--ion-color-medium);
-      font-size: 20px;
-      margin: 0 8px;
-    }
-    
-    .volume-bar {
-      --bar-height: 3px;
-      --bar-background: var(--ion-color-medium-tint);
-      --bar-background-active: var(--ion-color-primary);
-      --knob-background: var(--ion-color-primary);
-      --knob-size: 12px;
-      margin: 0;
-    }
-  }
-  
-  .queue-section {
-    margin-top: auto;
-    
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
-    
-    ion-list {
-      background: transparent;
-      
-      ion-item {
-        --padding-start: 0;
-        --inner-padding-end: 0;
-        margin-bottom: 8px;
-        border-radius: 8px;
-        
-        &.active {
-          --background: rgba(var(--ion-color-primary-rgb), 0.1);
-        }
-        
-        ion-thumbnail {
-          width: 48px;
-          height: 48px;
-          --border-radius: 4px;
-        }
-        
-        ion-label {
-          h3 {
-            font-weight: 500;
-            font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          
-          p {
-            font-size: 12px;
-            color: var(--ion-color-medium);
-          }
-        }
-        
-        ion-icon {
-          font-size: 18px;
-        }
-      }
-    }
-  }
-}
-
-@keyframes rotateAnimation {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+:host{--primary:#8e44ad;--secondary:#3498db;--bg:#121212;--text:#fff;--speed:.3s}
+.player-container{display:flex;flex-direction:column;height:100%;background:linear-gradient(to bottom,var(--bg),#1e1e2f);color:var(--text);padding:16px;overflow:hidden}
+.album-art{width:80%;max-width:320px;margin:20px auto;border-radius:12px;box-shadow:0 15px 35px rgba(0,0,0,.5);transition:transform var(--speed)}
+.album-art:hover{transform:scale(1.02)}
+.album-art img{width:100%;border-radius:12px}
+.track-info{text-align:center;margin:20px 0}
+.track-title{font-size:1.8rem;font-weight:700;margin-bottom:8px;text-shadow:0 2px 4px rgba(0,0,0,.3)}
+.artist-name{font-size:1.2rem;opacity:.8;margin-bottom:12px}
+.controls{display:flex;justify-content:center;align-items:center;margin:20px 0}
+.controls ion-button{--background:transparent;--color:var(--text);transition:transform var(--speed)}
+.controls ion-button:hover{--color:var(--primary);transform:scale(1.1)}
+.play-pause{--border-radius:50%;--background:var(--primary);--color:white;font-size:1.5rem;margin:0 20px}
+.play-pause:hover{--background:var(--secondary);box-shadow:0 0 15px var(--secondary)}
+.progress-container{padding:0 20px;margin-bottom:20px}
+.progress-bar{height:4px;width:100%;background:rgba(255,255,255,.2);border-radius:4px;margin-bottom:8px;position:relative;overflow:hidden}
+.progress{position:absolute;height:100%;background:linear-gradient(to right,var(--primary),var(--secondary));border-radius:4px;transition:width .1s linear}
+.time-labels{display:flex;justify-content:space-between;font-size:.8rem;opacity:.7}
+.additional-controls{display:flex;justify-content:space-between;padding:0 20px}
+.additional-controls ion-button{--background:transparent;--color:var(--text)}
+.active{--color:var(--primary)}
+@media(prefers-color-scheme:light){:host{--bg:#f5f5f7;--text:#333}.player-container{background:linear-gradient(to bottom,var(--bg),#e0e0e5)}}

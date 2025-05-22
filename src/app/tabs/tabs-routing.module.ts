@@ -8,27 +8,39 @@ const routes: Routes = [
     component: TabsPage,
     children: [
       {
-        path: 'tab1',
-        loadChildren: () => import('../tab1/tab1.module').then(m => m.Tab1PageModule)
+        path: 'home',
+        loadChildren: () => import('../pages/home/home.module').then(m => m.HomePageModule)
       },
       {
-        path: 'tab2',
-        loadChildren: () => import('../tab2/tab2.module').then(m => m.Tab2PageModule)
+        path: 'search',
+        loadChildren: () => import('../pages/search/search.module').then(m => m.SearchPageModule)
       },
       {
-        path: 'tab3',
-        loadChildren: () => import('../tab3/tab3.module').then(m => m.Tab3PageModule)
+        path: 'library',
+        loadChildren: () => import('../pages/library/library.module').then(m => m.LibraryPageModule)
+      },
+      {
+        path: 'local-audio',
+        loadChildren: () => import('../pages/local-audio/local-audio.module').then(m => m.LocalAudioPageModule)
+      },
+      {
+        path: 'playlist/:id',
+        loadChildren: () => import('../pages/playlist-stream/playlist-stream.module').then(m => m.PlaylistStreamPageModule)
+      },
+      {
+        path: 'player',
+        loadChildren: () => import('../pages/player/player.module').then(m => m.PlayerPageModule)
       },
       {
         path: '',
-        redirectTo: '/tabs/tab1',
+        redirectTo: '/tabs/home',
         pathMatch: 'full'
       }
     ]
   },
   {
     path: '',
-    redirectTo: '/tabs/tab1',
+    redirectTo: '/tabs/home',
     pathMatch: 'full'
   }
 ];

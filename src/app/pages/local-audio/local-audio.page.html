@@ -1,0 +1,55 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/library"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Upload Music</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="upload-container">
+    <div class="upload-section">
+      <h2>Add Local Audio Files</h2>
+      <p>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</p>
+      
+      <div class="upload-area" (click)="triggerFileInput()" [class.drag-over]="isDragging" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+        <input type="file" #fileInput (change)="onFileSelected($event)" accept=".mp3,.aac,.wav,.ogg,.flac,.opus,.m4a" multiple hidden>
+        <ion-icon name="cloud-upload"></ion-icon>
+        <p>Tap to select files or drag and drop</p>
+      </div>
+    </div>
+    
+    <div class="recently-added-section" *ngIf="recentlyAddedTracks.length > 0">
+      <h2>Recently Added</h2>
+      
+      <ion-list>
+        <ion-item *ngFor="let track of recentlyAddedTracks">
+          <ion-thumbnail slot="start">
+            <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+          </ion-thumbnail>
+          <ion-label>
+            <h2>{{ track.title }}</h2>
+            <h3>{{ track.artist }}</h3>
+            <p *ngIf="track.album">{{ track.album }}</p>
+          </ion-label>
+          <ion-button fill="clear" slot="end" (click)="playTrack(track)">
+            <ion-icon name="play" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </ion-list>
+    </div>
+    
+    <div class="uploads-pending" *ngIf="pendingUploads.length > 0">
+      <h2>Uploading Files</h2>
+      
+      <div class="upload-item" *ngFor="let upload of pendingUploads">
+        <div class="upload-details">
+          <div class="filename">{{ upload.file.name }}</div>
+          <div class="status">{{ upload.status }}</div>
+        </div>
+        <ion-progress-bar [value]="upload.progress"></ion-progress-bar>
+      </div>
+    </div>
+  </div>
+</ion-content>

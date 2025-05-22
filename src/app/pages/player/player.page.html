@@ -1,0 +1,106 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="closePlayer()">
+        <ion-icon slot="icon-only" name="chevron-down"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Now Playing</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="showOptions()">
+        <ion-icon slot="icon-only" name="ellipsis-vertical"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="player-container" *ngIf="playbackState">
+    <!-- Cover Art Section -->
+    <div class="cover-art-container">
+      <div class="cover-art" [class.rotate]="playbackState.isPlaying">
+        <img [src]="playbackState.currentTrack?.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+      </div>
+    </div>
+    
+    <!-- Track Info Section -->
+    <div class="track-info">
+      <h1 class="title">{{ playbackState.currentTrack?.title || 'No Track Playing' }}</h1>
+      <h2 class="artist">{{ playbackState.currentTrack?.artist || 'Unknown Artist' }}</h2>
+      <h3 class="album" *ngIf="playbackState.currentTrack?.album">{{ playbackState.currentTrack?.album }}</h3>
+    </div>
+    
+    <!-- Seek Bar Section -->
+    <div class="seek-controls">
+      <div class="time-display">
+        <div class="current-time">{{ formatTime(playbackState.currentTime) }}</div>
+        <div class="total-time">{{ formatTime(playbackState.duration) }}</div>
+      </div>
+      <ion-range
+        [(ngModel)]="seekValue"
+        (ionChange)="onSeekChange($event)"
+        (touchend)="onSeekEnd()"
+        (mouseup)="onSeekEnd()"
+        [max]="playbackState.duration || 1"
+        class="seek-bar">
+      </ion-range>
+    </div>
+    
+    <!-- Playback Controls -->
+    <div class="playback-controls">
+      <ion-button fill="clear" class="control-button shuffle" [color]="isShuffleActive ? 'primary' : 'medium'" (click)="toggleShuffle()">
+        <ion-icon slot="icon-only" name="shuffle"></ion-icon>
+      </ion-button>
+      
+      <ion-button fill="clear" class="control-button" (click)="previous()">
+        <ion-icon slot="icon-only" name="play-skip-back"></ion-icon>
+      </ion-button>
+      
+      <ion-button fill="clear" class="control-button play-button" (click)="togglePlay()">
+        <ion-icon slot="icon-only" [name]="playbackState.isPlaying ? 'pause' : 'play'"></ion-icon>
+      </ion-button>
+      
+      <ion-button fill="clear" class="control-button" (click)="next()">
+        <ion-icon slot="icon-only" name="play-skip-forward"></ion-icon>
+      </ion-button>
+      
+      <ion-button fill="clear" class="control-button repeat" [color]="repeatMode !== 'off' ? 'primary' : 'medium'" (click)="toggleRepeat()">
+        <ion-icon slot="icon-only" [name]="repeatMode === 'one' ? 'repeat-one' : 'repeat'"></ion-icon>
+      </ion-button>
+    </div>
+    
+    <!-- Volume Controls -->
+    <div class="volume-controls">
+      <ion-icon name="volume-low"></ion-icon>
+      <ion-range 
+        [(ngModel)]="volumeValue" 
+        (ionChange)="onVolumeChange($event)"
+        min="0" 
+        max="1" 
+        step="0.01" 
+        class="volume-bar">
+      </ion-range>
+      <ion-icon name="volume-high"></ion-icon>
+    </div>
+    
+    <!-- Queue Section -->
+    <div class="queue-section" *ngIf="playbackState.queue && playbackState.queue.length > 0">
+      <h2 class="section-title">Up Next</h2>
+      <ion-list lines="none">
+        <ion-item *ngFor="let track of playbackState.queue; let i = index" 
+                 [class.active]="i === playbackState.currentIndex"
+                 button 
+                 (click)="playTrackAtIndex(i)">
+          <ion-thumbnail slot="start">
+            <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+          </ion-thumbnail>
+          <ion-label>
+            <h3>{{ track.title }}</h3>
+            <p>{{ track.artist }}</p>
+          </ion-label>
+          <ion-icon *ngIf="i === playbackState.currentIndex" name="musical-notes" slot="end" color="primary"></ion-icon>
+        </ion-item>
+      </ion-list>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,74 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>VibeFlow</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="content-container">
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <ion-segment [(ngModel)]="currentMode" (ionChange)="modeChanged()">
+        <ion-segment-button value="all">
+          <ion-label>All Music</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="local">
+          <ion-label>Local</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="streaming">
+          <ion-label>Streaming</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Recently played section -->
+    <section class="music-section" *ngIf="recentlyPlayed && recentlyPlayed.length > 0">
+      <h2>Recently Played</h2>
+      <div class="horizontal-scroll">
+        <div class="track-card" *ngFor="let track of recentlyPlayed" (click)="playTrack(track)">
+          <div class="album-art">
+            <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+            <div class="play-overlay">
+              <ion-icon name="play"></ion-icon>
+            </div>
+          </div>
+          <div class="track-info">
+            <div class="title">{{ track.title }}</div>
+            <div class="artist">{{ track.artist }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Your playlists section -->
+    <section class="music-section" *ngIf="playlists && playlists.length > 0">
+      <h2>Your Playlists</h2>
+      <div class="horizontal-scroll">
+        <div class="playlist-card" *ngFor="let playlist of playlists" (click)="openPlaylist(playlist)">
+          <div class="playlist-art">
+            <img [src]="playlist.coverArt || 'assets/placeholder-playlist.png'" alt="Playlist Art">
+          </div>
+          <div class="playlist-info">
+            <div class="title">{{ playlist.name }}</div>
+            <div class="tracks-count">{{ playlist.trackIds.length }} tracks</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Library Actions -->
+    <section class="music-section">
+      <h2>Quick Actions</h2>
+      <div class="quick-actions">
+        <ion-button expand="block" (click)="navigateToLocalAudio()" color="primary">
+          <ion-icon slot="start" name="cloud-upload"></ion-icon>
+          Upload Local Music
+        </ion-button>
+        <ion-button expand="block" (click)="navigateToSearch()" color="secondary">
+          <ion-icon slot="start" name="search"></ion-icon>
+          Search Streaming Music
+        </ion-button>
+      </div>
+    </section>
+  </div>
+</ion-content>

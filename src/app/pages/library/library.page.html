@@ -1,0 +1,117 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Your Library</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="presentActionSheet()">
+        <ion-icon slot="icon-only" name="ellipsis-vertical"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="library-container">
+    <!-- Segment to switch between playlists and songs -->
+    <ion-segment [(ngModel)]="selectedSegment" (ionChange)="segmentChanged()">
+      <ion-segment-button value="playlists">
+        <ion-label>Playlists</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="songs">
+        <ion-label>Songs</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+    
+    <!-- Playlists view -->
+    <div *ngIf="selectedSegment === 'playlists'">
+      <div class="empty-state" *ngIf="playlists.length === 0">
+        <ion-icon name="musical-notes"></ion-icon>
+        <h3>No Playlists Yet</h3>
+        <p>Create your first playlist by tapping the + button below</p>
+        <ion-button expand="block" (click)="createPlaylist()">
+          <ion-icon slot="start" name="add"></ion-icon>
+          Create Playlist
+        </ion-button>
+      </div>
+      
+      <ion-list *ngIf="playlists.length > 0">
+        <ion-item *ngFor="let playlist of playlists" button detail (click)="openPlaylist(playlist)">
+          <ion-thumbnail slot="start">
+            <img [src]="playlist.coverArt || 'assets/placeholder-playlist.png'" alt="Playlist">
+          </ion-thumbnail>
+          <ion-label>
+            <h2>{{ playlist.name }}</h2>
+            <p>{{ playlist.trackIds.length }} {{ playlist.trackIds.length === 1 ? 'track' : 'tracks' }}</p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+      
+      <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="playlists.length > 0">
+        <ion-fab-button (click)="createPlaylist()">
+          <ion-icon name="add"></ion-icon>
+        </ion-fab-button>
+      </ion-fab>
+    </div>
+    
+    <!-- Songs view -->
+    <div *ngIf="selectedSegment === 'songs'">
+      <div class="filter-options">
+        <ion-chip [color]="sourceFilter === 'all' ? 'primary' : 'medium'" (click)="filterBySource('all')">
+          <ion-label>All</ion-label>
+        </ion-chip>
+        <ion-chip [color]="sourceFilter === 'local' ? 'primary' : 'medium'" (click)="filterBySource('local')">
+          <ion-icon name="phone-portrait"></ion-icon>
+          <ion-label>Local</ion-label>
+        </ion-chip>
+        <ion-chip [color]="sourceFilter === 'stream' ? 'primary' : 'medium'" (click)="filterBySource('stream')">
+          <ion-icon name="cloud"></ion-icon>
+          <ion-label>Streaming</ion-label>
+        </ion-chip>
+      </div>
+      
+      <div class="empty-state" *ngIf="filteredTracks.length === 0">
+        <ion-icon name="musical-notes"></ion-icon>
+        <h3>No Songs Found</h3>
+        <p *ngIf="sourceFilter === 'local'">Add local music from the upload page</p>
+        <p *ngIf="sourceFilter === 'stream'">Search for streaming music on the search page</p>
+        <p *ngIf="sourceFilter === 'all'">Start by adding music to your library</p>
+        
+        <ion-button *ngIf="sourceFilter === 'local'" expand="block" (click)="navigateToLocalAudio()">
+          <ion-icon slot="start" name="cloud-upload"></ion-icon>
+          Upload Music
+        </ion-button>
+        
+        <ion-button *ngIf="sourceFilter === 'stream'" expand="block" (click)="navigateToSearch()">
+          <ion-icon slot="start" name="search"></ion-icon>
+          Search Music
+        </ion-button>
+      </div>
+      
+      <ion-list *ngIf="filteredTracks.length > 0">
+        <ion-item-sliding *ngFor="let track of filteredTracks">
+          <ion-item button detail="false" (click)="playTrack(track)">
+            <ion-thumbnail slot="start">
+              <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+            </ion-thumbnail>
+            <ion-label>
+              <h2>{{ track.title }}</h2>
+              <h3>{{ track.artist }}</h3>
+              <p *ngIf="track.album">{{ track.album }}</p>
+            </ion-label>
+            <ion-note slot="end" *ngIf="track.duration">
+              {{ formatDuration(track.duration) }}
+            </ion-note>
+          </ion-item>
+          
+          <ion-item-options side="end">
+            <ion-item-option color="primary" (click)="addToPlaylist(track)">
+              <ion-icon slot="icon-only" name="add"></ion-icon>
+            </ion-item-option>
+            <ion-item-option color="danger" (click)="deleteTrack(track)">
+              <ion-icon slot="icon-only" name="trash"></ion-icon>
+            </ion-item-option>
+          </ion-item-options>
+        </ion-item-sliding>
+      </ion-list>
+    </div>
+  </div>
+</ion-content>

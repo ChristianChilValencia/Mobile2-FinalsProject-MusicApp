@@ -1,0 +1,93 @@
+.upload-container {
+  padding: 16px;
+  
+  .upload-section,
+  .recently-added-section,
+  .uploads-pending {
+    margin-bottom: 32px;
+    
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    p {
+      color: var(--ion-color-medium);
+      margin-bottom: 16px;
+    }
+  }
+  
+  .upload-area {
+    border: 2px dashed var(--ion-color-medium);
+    border-radius: 12px;
+    padding: 32px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover, &.drag-over {
+      border-color: var(--ion-color-primary);
+      background-color: rgba(var(--ion-color-primary-rgb), 0.05);
+    }
+    
+    ion-icon {
+      font-size: 48px;
+      color: var(--ion-color-medium);
+      margin-bottom: 16px;
+    }
+    
+    p {
+      margin: 0;
+      text-align: center;
+      font-weight: 500;
+    }
+  }
+  
+  ion-list {
+    background: transparent;
+    padding: 0;
+    
+    ion-item {
+      --padding-start: 0;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+  }
+  
+  .upload-item {
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    
+    .upload-details {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      
+      .filename {
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 70%;
+      }
+      
+      .status {
+        font-size: 14px;
+        color: var(--ion-color-medium);
+      }
+    }
+    
+    ion-progress-bar {
+      --progress-background: var(--ion-color-primary);
+      height: 4px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+  }
+}

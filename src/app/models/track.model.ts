@@ -8,6 +8,7 @@ export interface Track {
   album?: string;
   artwork?: string;
   addedAt: string;
+  type?: string; // Added file type
 }
 
 export interface Playlist {
@@ -28,6 +29,12 @@ export interface PlaybackState {
   duration: number;
   currentTime: number;
   volume: number;
+  repeatMode?: RepeatMode;
+  isShuffleActive?: boolean;
 }
 
-export type RepeatMode = 'off' | 'all' | 'one';
+export enum RepeatMode {
+  None = 'none',
+  All = 'all',
+  One = 'one'
+}

@@ -1,0 +1,152 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Local Music</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="scanFiles()" [disabled]="isScanning">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar
+      placeholder="Search tracks"
+      [(ngModel)]="searchTerm"
+      (ionChange)="filterTracks()"
+      debounce="300">
+    </ion-searchbar>
+  </ion-toolbar>
+  <ion-toolbar *ngIf="localTracks.length > 0">
+    <ion-segment [(ngModel)]="currentView" (ionChange)="viewChanged()">
+      <ion-segment-button value="tracks">
+        <ion-label>Tracks</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="artists">
+        <ion-label>Artists</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="albums">
+        <ion-label>Albums</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div *ngIf="isScanning" class="scanning-overlay">
+    <ion-spinner name="circular"></ion-spinner>
+    <p>Scanning your device for audio files...</p>
+  </div>
+
+  <ion-list *ngIf="!isScanning && localTracks.length === 0">
+    <ion-item lines="none">
+      <ion-label class="ion-text-center">
+        <p>No audio files found</p>
+        <ion-button expand="block" (click)="scanFiles()">
+          Scan for Audio Files
+        </ion-button>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <!-- Tracks View -->
+  <ion-list *ngIf="localTracks.length > 0 && currentView === 'tracks' && !isScanning">
+    <ion-item-divider sticky>
+      <ion-label>
+        <div class="divider-content">
+          <span>Found {{ filteredTracks.length }} audio files</span>
+          <ion-select 
+            placeholder="Sort by"
+            [(ngModel)]="sortOption"
+            (ionChange)="sortTracks()"
+            interface="popover">
+            <ion-select-option value="title">Title</ion-select-option>
+            <ion-select-option value="artist">Artist</ion-select-option>
+            <ion-select-option value="album">Album</ion-select-option>
+            <ion-select-option value="dateAdded">Date Added</ion-select-option>
+          </ion-select>
+        </div>
+      </ion-label>
+    </ion-item-divider>
+    
+    <ion-item *ngFor="let track of filteredTracks" (click)="playTrack(track)" button detail="false">
+      <ion-thumbnail slot="start">
+        <img [src]="track.artwork || 'assets/img/default-album-art.png'" alt="Album art">
+      </ion-thumbnail>
+      <ion-label>
+        <h2>{{ track.title }}</h2>
+        <p>{{ track.artist }}</p>
+        <p *ngIf="track.album && track.album !== 'Unknown Album'">{{ track.album }}</p>
+        <p *ngIf="track.type" class="file-type">{{ track.type.toUpperCase() }}</p>
+      </ion-label>
+      <ion-icon 
+        *ngIf="currentTrack?.id === track.id && isPlaying" 
+        name="pause-circle" 
+        color="primary" 
+        slot="end"
+        (click)="togglePlayback($event, track)">
+      </ion-icon>
+      <ion-icon 
+        *ngIf="currentTrack?.id !== track.id || !isPlaying" 
+        name="play-circle" 
+        slot="end"
+        (click)="togglePlayback($event, track)">
+      </ion-icon>
+    </ion-item>
+  </ion-list>
+
+  <!-- Artists View -->
+  <ion-list *ngIf="localTracks.length > 0 && currentView === 'artists' && !isScanning">
+    <ion-item-divider sticky>
+      <ion-label>
+        Artists ({{ artists.length }})
+      </ion-label>
+    </ion-item-divider>
+    
+    <ion-item *ngFor="let artist of artists" button detail="true" (click)="showArtistTracks(artist)">
+      <ion-icon name="person" slot="start"></ion-icon>
+      <ion-label>
+        <h2>{{ artist }}</h2>
+        <p>{{ getTrackCountByArtist(artist) }} tracks</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <!-- Albums View -->
+  <ion-list *ngIf="localTracks.length > 0 && currentView === 'albums' && !isScanning">
+    <ion-item-divider sticky>
+      <ion-label>
+        Albums ({{ albums.length }})
+      </ion-label>
+    </ion-item-divider>
+    
+    <ion-item *ngFor="let album of albums" button detail="true" (click)="showAlbumTracks(album)">
+      <ion-icon name="disc" slot="start"></ion-icon>
+      <ion-label>
+        <h2>{{ album }}</h2>
+        <p>{{ getTrackCountByAlbum(album) }} tracks</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <!-- Play Controls -->
+  <ion-footer *ngIf="currentTrack">
+    <ion-toolbar>
+      <ion-item lines="none" button (click)="openNowPlaying()">
+        <ion-thumbnail slot="start">
+          <img [src]="currentTrack.artwork || 'assets/img/default-album-art.png'" alt="Album art">
+        </ion-thumbnail>
+        <ion-label>
+          <h2>{{ currentTrack.title }}</h2>
+          <p>{{ currentTrack.artist }}</p>
+        </ion-label>
+        <ion-buttons slot="end">
+          <ion-button (click)="togglePlayback($event, currentTrack)">
+            <ion-icon [name]="isPlaying ? 'pause' : 'play'"></ion-icon>
+          </ion-button>
+          <ion-button (click)="next($event)">
+            <ion-icon name="play-skip-forward"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-item>
+    </ion-toolbar>
+  </ion-footer>
+</ion-content>

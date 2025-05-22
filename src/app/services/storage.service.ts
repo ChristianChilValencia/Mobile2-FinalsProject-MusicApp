@@ -82,20 +82,35 @@ export class StorageService {
       }
       throw error;
     }
-  }
-  private async createMusicDirectory(): Promise<void> {
+  }  private async createMusicDirectory(): Promise<void> {
     try {
+      // First check if the directory exists
+      try {
+        await Filesystem.readdir({
+          path: 'music',
+          directory: this.rootDir
+        });
+        // Directory already exists, no need to create it
+        return;
+      } catch (err) {
+        // Directory doesn't exist, continue to create it
+      }
+      
+      // Create the directory
       await Filesystem.mkdir({
         path: 'music',
         directory: this.rootDir,
         recursive: true
       });
     } catch (error: unknown) {
-      // Ignore if directory already exists
-      if (error instanceof Error && !error.message.includes('exists')) {
+      // Handle any other errors
+      if (error instanceof Error && error.message.includes('Current directory does already exist')) {
+        // This is fine, directory exists
+        return;
+      } else if (error instanceof Error) {
         console.error('Error creating directory:', error);
         throw error;
-      } else if (!(error instanceof Error)) {
+      } else {
         console.error('Unknown error creating directory:', error);
         throw new Error('Failed to create music directory');
       }

@@ -15,7 +15,9 @@ export class PlayerPage implements OnInit, OnDestroy {
   playbackState: PlaybackState | null = null;
   playbackSubscription: Subscription | null = null;
   isShuffleOn = false;
-  repeatMode: RepeatMode = 'off';
+  repeatMode: RepeatMode = RepeatMode.None;
+  // Make RepeatMode accessible in the template
+  RepeatMode = RepeatMode;
   
   // Add missing properties
   seekValue: number = 0;
@@ -78,7 +80,6 @@ export class PlayerPage implements OnInit, OnDestroy {
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   }
-
   toggleShuffle() {
     this.isShuffleOn = !this.isShuffleOn;
     this.mediaPlayerService.setShuffle(this.isShuffleOn);
@@ -89,18 +90,20 @@ export class PlayerPage implements OnInit, OnDestroy {
       this.showToast('Shuffle off');
     }
   }
+  
   toggleRepeat() {
-    if (this.repeatMode === 'off') {
-      this.repeatMode = 'all';
+    if (this.repeatMode === RepeatMode.None) {
+      this.repeatMode = RepeatMode.All;
       this.showToast('Repeat all');
-    } else if (this.repeatMode === 'all') {
-      this.repeatMode = 'one';
+    } else if (this.repeatMode === RepeatMode.All) {
+      this.repeatMode = RepeatMode.One;
       this.showToast('Repeat one');
     } else {
-      this.repeatMode = 'off';
+      this.repeatMode = RepeatMode.None;
       this.showToast('Repeat off');
     }
     
+    // Update the media player service
     this.mediaPlayerService.setRepeatMode(this.repeatMode);
   }
   async presentOptions() {

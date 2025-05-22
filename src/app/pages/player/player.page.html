@@ -63,9 +63,8 @@
       <ion-button fill="clear" class="control-button" (click)="next()">
         <ion-icon slot="icon-only" name="play-skip-forward"></ion-icon>
       </ion-button>
-      
-      <ion-button fill="clear" class="control-button repeat" [color]="repeatMode !== 'off' ? 'primary' : 'medium'" (click)="toggleRepeat()">
-        <ion-icon slot="icon-only" [name]="repeatMode === 'one' ? 'repeat-one' : 'repeat'"></ion-icon>
+        <ion-button fill="clear" class="control-button repeat" [color]="repeatMode !== RepeatMode.None ? 'primary' : 'medium'" (click)="toggleRepeat()">
+        <ion-icon slot="icon-only" [name]="repeatMode === RepeatMode.One ? 'repeat-one' : 'repeat'"></ion-icon>
       </ion-button>
     </div>
     

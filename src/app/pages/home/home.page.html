@@ -1,6 +1,9 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>VibeFlow</ion-title>
+      <ion-button slot="end" (click)="navigateToLocalAudio()" color="primary">
+        <ion-icon name="cloud-upload"></ion-icon>
+      </ion-button>
   </ion-toolbar>
 </ion-header>
 
@@ -53,21 +56,6 @@
             <div class="tracks-count">{{ playlist.trackIds.length }} tracks</div>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- Library Actions -->
-    <section class="music-section">
-      <h2>Quick Actions</h2>
-      <div class="quick-actions">
-        <ion-button expand="block" (click)="navigateToLocalAudio()" color="primary">
-          <ion-icon slot="start" name="cloud-upload"></ion-icon>
-          Upload Local Music
-        </ion-button>
-        <ion-button expand="block" (click)="navigateToSearch()" color="secondary">
-          <ion-icon slot="start" name="search"></ion-icon>
-          Search Streaming Music
-        </ion-button>
       </div>
     </section>
   </div>

@@ -1,15 +1,27 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ActionSheetController, ToastController } from '@ionic/angular';
+import { ActionSheetController, ToastController, NavController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService } from '../../services/data.service';
 import { PlaybackState, Track, RepeatMode } from '../../models/track.model';
+import { trigger, state, style, animate, transition } from '@angular/animations';
 
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
-  standalone: false
+  standalone: false,
+  animations: [
+    trigger('fadeInOut', [
+      transition(':enter', [
+        style({ opacity: 0 }),
+        animate('300ms', style({ opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('300ms', style({ opacity: 0 }))
+      ])
+    ])
+  ]
 })
 export class PlayerPage implements OnInit, OnDestroy {
   playbackState: PlaybackState | null = null;
@@ -23,12 +35,12 @@ export class PlayerPage implements OnInit, OnDestroy {
   seekValue: number = 0;
   volumeValue: number = 1;
   isShuffleActive: boolean = false;
-
   constructor(
     private mediaPlayerService: MediaPlayerService,
     private dataService: DataService,
     private actionSheetController: ActionSheetController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private navCtrl: NavController
   ) {}
 
   ngOnInit() {
@@ -72,7 +84,6 @@ export class PlayerPage implements OnInit, OnDestroy {
     const newVolume = event.detail.value;
     this.mediaPlayerService.setVolume(newVolume);
   }
-
   formatTime(seconds: number): string {
     if (!seconds || isNaN(seconds)) return '0:00';
     
@@ -148,8 +159,9 @@ export class PlayerPage implements OnInit, OnDestroy {
     });
     
     await actionSheet.present();
-  }
-
+  }  /**
+   * Add a specified track to playlist
+   */
   async addToPlaylist(track: Track) {
     const playlists = await this.dataService.getAllPlaylists();
     
@@ -179,7 +191,8 @@ export class PlayerPage implements OnInit, OnDestroy {
         return true;
       }
     });
-      // Add cancel button
+    
+    // Add cancel button
     buttons.push({
       text: 'Cancel',
       handler: () => {
@@ -194,6 +207,28 @@ export class PlayerPage implements OnInit, OnDestroy {
     
     await actionSheet.present();
   }
+  /**
+   * Skip forward 5 seconds
+   */
+  skipForward() {
+    if (this.playbackState && this.playbackState.currentTime !== undefined) {
+      const newPosition = Math.min(
+        this.playbackState.currentTime + 5,
+        this.playbackState.duration || 0
+      );
+      this.mediaPlayerService.seek(newPosition);
+    }
+  }
+
+  /**
+   * Skip backward 5 seconds
+   */
+  skipBackward() {
+    if (this.playbackState && this.playbackState.currentTime !== undefined) {
+      const newPosition = Math.max(this.playbackState.currentTime - 5, 0);
+      this.mediaPlayerService.seek(newPosition);
+    }
+  }
 
   // Add missing methods
   next() {
@@ -203,10 +238,9 @@ export class PlayerPage implements OnInit, OnDestroy {
   previous() {
     this.mediaPlayerService.previous();
   }
-  
   closePlayer() {
-    // Navigate back or hide the player
-    console.log('Close player not implemented');
+    // Navigate back
+    this.navCtrl.back();
   }
   
   showOptions() {
@@ -222,6 +256,15 @@ export class PlayerPage implements OnInit, OnDestroy {
     // Play track at specific index in the queue
     if (index >= 0 && this.playbackState && this.playbackState.queue.length > index) {
       this.mediaPlayerService.setQueue(this.playbackState.queue, index);
+    }
+  }  /**
+   * Add current track to playlist - called from the UI
+   */
+  addCurrentTrackToPlaylist() {
+    if (this.playbackState && this.playbackState.currentTrack) {
+      this.addToPlaylist(this.playbackState.currentTrack);
+    } else {
+      this.showToast('No track is currently playing', 'warning');
     }
   }
 

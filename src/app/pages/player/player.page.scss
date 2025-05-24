@@ -1,21 +1,114 @@
 :host{--primary:#8e44ad;--secondary:#3498db;--bg:#121212;--text:#fff;--speed:.3s}
-.player-container{display:flex;flex-direction:column;height:100%;background:linear-gradient(to bottom,var(--bg),#1e1e2f);color:var(--text);padding:16px;overflow:hidden}
-.album-art{width:80%;max-width:320px;margin:20px auto;border-radius:12px;box-shadow:0 15px 35px rgba(0,0,0,.5);transition:transform var(--speed)}
-.album-art:hover{transform:scale(1.02)}
-.album-art img{width:100%;border-radius:12px}
-.track-info{text-align:center;margin:20px 0}
-.track-title{font-size:1.8rem;font-weight:700;margin-bottom:8px;text-shadow:0 2px 4px rgba(0,0,0,.3)}
-.artist-name{font-size:1.2rem;opacity:.8;margin-bottom:12px}
-.controls{display:flex;justify-content:center;align-items:center;margin:20px 0}
-.controls ion-button{--background:transparent;--color:var(--text);transition:transform var(--speed)}
-.controls ion-button:hover{--color:var(--primary);transform:scale(1.1)}
-.play-pause{--border-radius:50%;--background:var(--primary);--color:white;font-size:1.5rem;margin:0 20px}
-.play-pause:hover{--background:var(--secondary);box-shadow:0 0 15px var(--secondary)}
-.progress-container{padding:0 20px;margin-bottom:20px}
-.progress-bar{height:4px;width:100%;background:rgba(255,255,255,.2);border-radius:4px;margin-bottom:8px;position:relative;overflow:hidden}
-.progress{position:absolute;height:100%;background:linear-gradient(to right,var(--primary),var(--secondary));border-radius:4px;transition:width .1s linear}
-.time-labels{display:flex;justify-content:space-between;font-size:.8rem;opacity:.7}
-.additional-controls{display:flex;justify-content:space-between;padding:0 20px}
-.additional-controls ion-button{--background:transparent;--color:var(--text)}
-.active{--color:var(--primary)}
-@media(prefers-color-scheme:light){:host{--bg:#f5f5f7;--text:#333}.player-container{background:linear-gradient(to bottom,var(--bg),#e0e0e5)}}
+.player-container{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background: linear-gradient(to bottom,var(--bg),#1e1e2f);
+  color: var(--text);
+  padding: 16px;
+  overflow: hidden;
+  text-align: center;
+}
+.cover-art-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+}
+.cover-art {
+  width: 280px;
+  height: 280px;
+  border-radius: 12px;
+  box-shadow: 0 15px 35px rgba(0,0,0,.5);
+  overflow: hidden;
+  transition: transform var(--speed);
+}
+.cover-art.rotate {
+  animation: rotate 30s linear infinite;
+}
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.cover-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.track-info {
+  width: 100%;
+  margin: 20px 0;
+}
+.title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0,0,0,.3);
+}
+.artist {
+  font-size: 1.2rem;
+  opacity: .8;
+  margin-bottom: 12px;
+}
+.album {
+  font-size: 1rem;
+  opacity: .7;
+}
+.seek-controls {
+  width: 100%;
+  padding: 0 16px;
+  margin: 20px 0;
+}
+.time-display {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+.seek-bar {
+  --bar-height: 4px;
+  --bar-background: rgba(255, 255, 255, 0.2);
+  --bar-background-active: var(--primary);
+  --knob-background: var(--primary);
+  --knob-size: 12px;
+  --pin-background: var(--primary);
+}
+.playback-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+  width: 100%;
+}
+.control-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  margin: 0 8px;
+  height: 48px;
+  position: relative;
+}
+.play-button {
+  --border-radius: 50%;
+  --padding-start: 0;
+  --padding-end: 0;
+  width: 64px;
+  height: 64px;
+  font-size: 2rem;
+  margin: 0 16px;
+  background: var(--primary);
+  box-shadow: 0 0 15px rgba(142, 68, 173, 0.5);
+}
+.skip-label {
+  position: absolute;
+  bottom: -6px;
+  font-size: 10px;
+  opacity: 0.8;
+}
+.add-playlist {
+  margin-left: 20px;
+}

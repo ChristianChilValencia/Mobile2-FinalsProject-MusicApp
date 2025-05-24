@@ -1,4 +1,4 @@
-<div class="mini-player" *ngIf="playbackState && playbackState.currentTrack" (click)="openPlayerPage()">
+<div class="mini-player" *ngIf="playbackState && playbackState.currentTrack && !isPlayerPage" (click)="openPlayerPage()">
   <div class="mini-player-container">
     <div class="track-info">
       <img [src]="playbackState.currentTrack.artwork || 'assets/placeholder-album.png'" alt="Album Art" class="album-art">
@@ -6,7 +6,7 @@
         <div class="title">{{ playbackState.currentTrack.title }}</div>
         <div class="artist">{{ playbackState.currentTrack.artist }}</div>
       </div>
-    </div>      <div class="controls">
+    </div><div class="controls">
       <ion-button fill="clear" (click)="togglePlay(); $event.stopPropagation()">
         <ion-icon [name]="playbackState.isPlaying ? 'pause' : 'play'" slot="icon-only"></ion-icon>
       </ion-button>

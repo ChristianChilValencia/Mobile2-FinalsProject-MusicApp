@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
+import { RouterModule } from '@angular/router';
 import { MiniPlayerComponent } from './mini-player/mini-player.component';
 
 @NgModule({
@@ -9,7 +10,8 @@ import { MiniPlayerComponent } from './mini-player/mini-player.component';
   ],
   imports: [
     CommonModule,
-    IonicModule
+    IonicModule,
+    RouterModule
   ],
   exports: [
     MiniPlayerComponent

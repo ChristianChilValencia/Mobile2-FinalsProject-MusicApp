@@ -2,13 +2,14 @@
 .player-container{
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between; /* Changed from center to ensure content spreads out */
   align-items: center;
   height: 100%;
+  min-height: 500px;
   background: linear-gradient(to bottom,var(--bg),#1e1e2f);
   color: var(--text);
   padding: 16px;
-  overflow: hidden;
+  overflow-y: auto; /* Allow scrolling if needed */
   text-align: center;
 }
 .cover-art-container {
@@ -16,11 +17,14 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 20px 0;
+  margin: 10px 0;
+  flex-shrink: 0;
 }
 .cover-art {
-  width: 280px;
-  height: 280px;
+  width: min(280px, 80vw); /* Responsive width */
+  height: min(280px, 80vw); /* Keep it square */
+  max-height: 35vh; /* Limit height on smaller screens */
+  max-width: 35vh;
   border-radius: 12px;
   box-shadow: 0 15px 35px rgba(0,0,0,.5);
   overflow: hidden;
@@ -41,49 +45,70 @@
 }
 .track-info {
   width: 100%;
-  margin: 20px 0;
+  margin: 10px 0;
+  padding: 0 10px;
+  flex-shrink: 0;
 }
 .title {
-  font-size: 1.8rem;
+  font-size: clamp(1.2rem, 5vw, 1.8rem);
   font-weight: 700;
   margin-bottom: 8px;
   text-shadow: 0 2px 4px rgba(0,0,0,.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .artist {
-  font-size: 1.2rem;
+  font-size: clamp(0.9rem, 4vw, 1.2rem);
   opacity: .8;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .album {
-  font-size: 1rem;
+  font-size: clamp(0.8rem, 3vw, 1rem);
   opacity: .7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .seek-controls {
   width: 100%;
   padding: 0 16px;
-  margin: 20px 0;
+  margin: 10px 0;
+  flex-shrink: 0;
 }
 .time-display {
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-  opacity: 0.7;
+  opacity: 0.8;
   margin-bottom: 4px;
+  padding: 0 2px;
+}
+.current-time, .total-time {
+  min-width: 35px; /* Ensure minimum width for the time displays */
+  font-weight: 500;
 }
 .seek-bar {
   --bar-height: 4px;
   --bar-background: rgba(255, 255, 255, 0.2);
   --bar-background-active: var(--primary);
   --knob-background: var(--primary);
-  --knob-size: 12px;
+  --knob-size: 14px; /* Slightly larger for better touch target */
   --pin-background: var(--primary);
+  --pin-color: var(--text);
 }
 .playback-controls {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 20px 0;
+  margin: 10px 0 20px;
   width: 100%;
+  flex-shrink: 0;
+  position: relative;
+  padding-bottom: 16px; /* Add space for the skip labels */
 }
 .control-button {
   --padding-start: 8px;
@@ -91,24 +116,106 @@
   margin: 0 8px;
   height: 48px;
   position: relative;
+  min-width: 48px; /* Ensure minimum width */
 }
 .play-button {
   --border-radius: 50%;
   --padding-start: 0;
   --padding-end: 0;
-  width: 64px;
-  height: 64px;
-  font-size: 2rem;
+  width: min(64px, 18vw); /* Responsive width */
+  height: min(64px, 18vw); /* Responsive height */
+  min-width: 48px; /* Minimum size */
+  min-height: 48px;
+  font-size: clamp(1.5rem, 5vw, 2rem);
   margin: 0 16px;
   background: var(--primary);
   box-shadow: 0 0 15px rgba(142, 68, 173, 0.5);
 }
 .skip-label {
   position: absolute;
-  bottom: -6px;
-  font-size: 10px;
-  opacity: 0.8;
+  bottom: -12px; /* Moved down to be more visible */
+  left: 50%;
+  transform: translateX(-50%); /* Center it */
+  font-size: 11px;
+  font-weight: bold;
+  opacity: 1; /* Full opacity */
+  background-color: rgba(0, 0, 0, 0.2); /* Slight background for better visibility */
+  padding: 2px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 .add-playlist {
-  margin-left: 20px;
+  margin-left: 10px;
+}
+
+/* Add responsive design adjustments */
+@media (max-height: 600px) {
+  .player-container {
+    justify-content: flex-start;
+  }
+  
+  .cover-art {
+    max-height: 30vh;
+    max-width: 30vh;
+  }
+  
+  .track-info {
+    margin: 5px 0;
+  }
+  
+  .seek-controls {
+    margin: 5px 0;
+  }
+  
+  .playback-controls {
+    margin: 5px 0 15px;
+  }
+}
+
+/* Ensure content is visible on very small screens */
+@media (max-height: 500px) {
+  .player-container {
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding-bottom: 30px;
+  }
+  
+  .cover-art {
+    max-height: 25vh;
+    max-width: 25vh;
+  }
+}
+
+/* For landscape orientation */
+@media (orientation: landscape) and (max-height: 500px) {
+  .player-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: 10px;
+  }
+  
+  .cover-art-container {
+    width: 40%;
+    margin: 5px;
+  }
+  
+  .track-info {
+    width: 55%;
+    text-align: left;
+    margin: 5px;
+  }
+  
+  .seek-controls {
+    width: 100%;
+    order: 3;
+    margin: 5px 0;
+  }
+  
+  .playback-controls {
+    width: 100%;
+    order: 4;
+    margin: 5px 0 15px;
+  }
 }

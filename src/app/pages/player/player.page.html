@@ -9,7 +9,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" scrollY="true">
   <div class="player-container" *ngIf="playbackState">
     <!-- Cover Art Section -->
     <div class="cover-art-container">
@@ -38,17 +38,17 @@
         class="seek-bar">
       </ion-range>
     </div>
-    
-    <!-- Playback Controls -->
+      <!-- Playback Controls -->
     <div class="playback-controls">
       <ion-button fill="clear" class="control-button" (click)="skipBackward()">
         <ion-icon slot="icon-only" name="play-back"></ion-icon>
         <span class="skip-label">-5s</span>
       </ion-button>
-      
-      <ion-button fill="clear" class="control-button play-button" (click)="togglePlay()">
+        <ion-button fill="clear" class="control-button play-button" (click)="togglePlay()">
         <ion-icon slot="icon-only" [name]="playbackState.isPlaying ? 'pause' : 'play'"></ion-icon>
-      </ion-button>      <ion-button fill="clear" class="control-button" (click)="skipForward()">
+      </ion-button>
+      
+      <ion-button fill="clear" class="control-button" (click)="skipForward()">
         <ion-icon slot="icon-only" name="play-forward"></ion-icon>
         <span class="skip-label">+5s</span>
       </ion-button>

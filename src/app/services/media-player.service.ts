@@ -21,6 +21,7 @@ export class MediaPlayerService {
   private isNative = false;
   private currentTrackId: string | null = null;
   private progressInterval: any = null;
+  private audioErrorHandler: ((e: Event) => void) | null = null;
 
   // Observable state
   private playbackStateSubject = new BehaviorSubject<PlaybackState>({
@@ -261,10 +262,13 @@ export class MediaPlayerService {
       });
     });
     
-    this.audio.addEventListener('error', (e) => {
+    // Store the error handler so we can remove it later
+    this.audioErrorHandler = (e: Event) => {
       console.error('Audio playback error:', e);
       this.updatePlaybackState({ isPlaying: false });
-    });
+    };
+    
+    this.audio.addEventListener('error', this.audioErrorHandler);
   }  private async loadAndPlayTrack(track: Track): Promise<void> {
     try {
       if (this.currentIndex === -1) {
@@ -274,38 +278,125 @@ export class MediaPlayerService {
       // Stop current playback if any
       await this.stopCurrentPlayback();
 
-      // Get the audio file from storage
-      const audioBlob = await this.getAudioFile(track.id);
-      const blobUrl = URL.createObjectURL(audioBlob);
+      // Add a small delay to ensure cleanup is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Create and configure audio element
-      this.audio = new Audio(blobUrl);
-      
+      if (this.isNative) {
+        try {
+          // For streaming tracks, use direct URL playback
+          if (track.source === 'stream' && track.pathOrUrl) {
+            console.log('Attempting native playback of streaming URL:', track.pathOrUrl);
+            
+            // Use unique ID for the track that includes timestamp to prevent conflicts
+            const assetId = `stream-${track.id}-${Date.now()}`;
+            this.currentTrackId = assetId;
+
+            // Pre-load the streaming URL
+            await NativeAudio.preload({
+              assetPath: track.pathOrUrl,
+              assetId: assetId,
+              isUrl: true,
+              volume: this.volume,
+              audioChannelNum: 1 // Use mono channel for preview tracks
+            });
+
+            // Double check no other audio is playing
+            try {
+              const oldStreamId = `stream-${track.id}`;
+              await NativeAudio.stop({ assetId: oldStreamId });
+              await NativeAudio.unload({ assetId: oldStreamId });
+            } catch (e) {
+              // Ignore errors here as the old stream might not exist
+            }
+
+            // Start playback
+            await NativeAudio.play({ assetId });
+            this.startProgressTracking();
+
+            this.updatePlaybackState({
+              currentTrack: track,
+              isPlaying: true,
+              currentTime: 0,
+              duration: track.duration || 30 // Default to 30s for preview tracks
+            });
+            return;
+          }
+
+          // For local files, use the existing file path logic
+          const filePath = this.getNormalizedFilePath(track.pathOrUrl);
+          console.log('Attempting native playback of local file:', filePath);
+
+          this.currentTrackId = track.id;
+          await NativeAudio.preload({
+            assetPath: filePath,
+            assetId: track.id
+          });
+
+          await NativeAudio.play({ assetId: track.id });
+          this.startProgressTracking();
+
+          this.updatePlaybackState({
+            currentTrack: track,
+            isPlaying: true,
+            currentTime: 0,
+            duration: track.duration || 0
+          });
+        } catch (nativeError) {
+          console.error('Native audio playback failed:', nativeError);
+          // Fall back to web audio
+          await this.fallbackToWebAudio(track);
+        }
+      } else {
+        // Web audio playback
+        await this.playWithWebAudio(track);
+      }
+    } catch (error) {
+      console.error('Error in loadAndPlayTrack:', error);
+      await this.handleMediaPlaybackError(track, 'loadAndPlayTrack');
+    }
+  }
+
+  private async playWithWebAudio(track: Track): Promise<void> {
+    try {
+      // For streaming tracks, use the URL directly
+      if (track.source === 'stream' && track.pathOrUrl) {
+        this.audio = new Audio(track.pathOrUrl);
+      } else {
+        // For local files, get from storage and create blob URL
+        const audioBlob = await this.getAudioFile(track.id);
+        const blobUrl = URL.createObjectURL(audioBlob);
+        this.audio = new Audio(blobUrl);
+
+        // Clean up blob URL when done
+        this.audio.onended = () => {
+          URL.revokeObjectURL(blobUrl);
+          this.onTrackEnded();
+        };
+      }
+
       // Set up event handlers
-      this.audio.onended = () => {
-        URL.revokeObjectURL(blobUrl);
-        this.onTrackEnded();
-      };
+      this.setupAudioEvents();
+      this.audio.volume = this.volume;
 
-      this.audio.onerror = (error) => {
-        URL.revokeObjectURL(blobUrl);
-        console.error('Error playing audio:', error);
-      };      // Start playback
+      // Start playback
       await this.audio.play();
       
-      // Update playback state
       this.updatePlaybackState({
         currentTrack: track,
-        isPlaying: true
+        isPlaying: true,
+        currentTime: 0,
+        duration: track.duration || (track.source === 'stream' ? 30 : 0)
       });
-      
-      // Update current track ID
-      this.currentTrackId = track.id;
-      
     } catch (error) {
-      console.error('Error loading track:', error);
+      console.error('Web audio playback failed:', error);
       throw error;
     }
+  }
+
+  private async fallbackToWebAudio(track: Track): Promise<void> {
+    console.log('Falling back to web audio playback');
+    this.isNative = false;
+    await this.playWithWebAudio(track);
   }
 
   /**
@@ -497,21 +588,67 @@ export class MediaPlayerService {
     }
   }
 
+  private activeAudioIds: Set<string> = new Set();
+
   private async stopCurrentPlayback(): Promise<void> {
-    if (this.audio) {
+    // Create an array to store all cleanup promises
+    const cleanupPromises: Promise<void>[] = [];
+
+    // Stop any web audio playback
+    if (this.audio && this.audioErrorHandler) {
       this.audio.pause();
       this.audio.src = '';
-      this.stopProgressTracking();
+      this.audio.removeEventListener('error', this.audioErrorHandler);
+      this.audioErrorHandler = null;
+      this.audio = null;
     }
     
+    // Stop all native audio playback
     if (this.currentTrackId) {
-      try {
-        await NativeAudio.stop({ assetId: this.currentTrackId });
-        await NativeAudio.unload({ assetId: this.currentTrackId });
-      } catch (e) {
-        // Ignore errors from stopping/unloading
+      // Add current track to active IDs if not already there
+      this.activeAudioIds.add(this.currentTrackId);
+      
+      // Attempt to stop and unload all tracked audio IDs
+      for (const audioId of this.activeAudioIds) {
+        cleanupPromises.push(
+          (async () => {
+            try {
+              // First stop the playback
+              await NativeAudio.stop({ assetId: audioId });
+              // Then unload the audio to free up resources
+              await NativeAudio.unload({ assetId: audioId });
+              
+              // If this is a stream track, also try to unload with the stream- prefix
+              if (audioId.includes('stream-')) {
+                try {
+                  await NativeAudio.unload({ assetId: audioId });
+                } catch (e) {
+                  // Ignore errors here as the track might already be unloaded
+                }
+              }
+            } catch (e) {
+              console.warn(`Error stopping/unloading native audio ${audioId}:`, e);
+            }
+          })()
+        );
       }
+      
+      // Wait for all cleanup operations to complete
+      await Promise.all(cleanupPromises);
+      
+      // Clear the active audio IDs and current track
+      this.activeAudioIds.clear();
+      this.currentTrackId = null;
     }
+
+    // Always stop progress tracking
+    this.stopProgressTracking();
+    
+    // Reset playback state
+    this.updatePlaybackState({ 
+      isPlaying: false,
+      currentTime: 0
+    });
   }
 
   /**

@@ -583,32 +583,44 @@ export class MediaPlayerService {
       this.next();
     }
   }
-    /**
-   * Start tracking progress for native media
-   */  private startProgressTracking(): void {
+  /**
+   * Start tracking progress for media playback
+   */
+  private startProgressTracking(): void {
     // Clear any existing interval
-    if (this.progressInterval) {
-      clearInterval(this.progressInterval);
-    }
+    this.stopProgressTracking();
     
     // Get current state
     const currentState = this.playbackStateSubject.value;
     let lastTime = currentState.currentTime || 0;
     
-    // Set up a new interval
+    // Only start tracking if we're actually playing
+    if (!currentState.isPlaying) {
+      return;
+    }
+    
+    // Set up a new interval with higher frequency for smoother progress
     this.progressInterval = setInterval(() => {
+      // Don't update if playback is paused
+      if (!this.playbackStateSubject.value.isPlaying) {
+        return;
+      }
+      
       if (this.nativeMedia) {
         // Get current position from native media
         this.nativeMedia.getCurrentPosition(
           (position: number) => {
             if (position >= 0) {
-              // Update UI with new position
-              this.updatePlaybackState({ currentTime: position });
+              // Valid position reported, update UI
               lastTime = position;
+              // Cap at 30 seconds
+              if (lastTime > 30) {
+                lastTime = 30;
+              }
+              this.updatePlaybackState({ currentTime: lastTime });
             } else {
-              // If position isn't available (some devices have issues),
-              // simulate progress by incrementing lastTime
-              lastTime += 0.1; // increment by 100ms
+              // If position isn't available, simulate progress
+              lastTime += 0.1; // increment by 100ms since our interval is 100ms
               // Cap at 30 seconds
               if (lastTime > 30) {
                 lastTime = 30;
@@ -634,8 +646,16 @@ export class MediaPlayerService {
           lastTime = 30;
         }
         this.updatePlaybackState({ currentTime: lastTime });
+      } else if (this.audio) {
+        // For web audio, update from the HTML audio element
+        // but ensure we cap at 30 seconds
+        let webTime = this.audio.currentTime;
+        if (webTime > 30) {
+          webTime = 30;
+        }
+        this.updatePlaybackState({ currentTime: webTime });
       }
-    }, 100); // Update more frequently for smoother progress
+    }, 100); // Update at 10Hz for smoother progress
   }
   
   /**
@@ -874,8 +894,7 @@ export class MediaPlayerService {
       // Restore original queue
       const currentTrack = this.queue[this.currentIndex];
       this.queue = [...this.originalQueue];
-      
-      // Find current track in original queue
+        // Find current track in original queue
       if (currentTrack) {
         this.currentIndex = this.queue.findIndex(t => t.id === currentTrack.id);
         if (this.currentIndex === -1) this.currentIndex = 0;
@@ -1042,111 +1061,69 @@ export class MediaPlayerService {
     // Handle the specific problematic file
     if (track.id === 'dfbdb514-b070-458f-b1a5-cdff068fc6b9' || 
         filename === 'dfbdb514-b070-458f-b1a5-cdff068fc6b9.wav') {
-      console.log('Handling known problematic file ID: dfbdb514-b070-458f-b1a5-cdff068fc6b9');
-      
-      // Try every possible location for this specific file
-      for (const dir of possibleDirs) {
-        const newPath = dir + filename;
-        console.log(`Trying alternative path: ${newPath}`);
-        try {
-          // Check if this file exists
-          await Filesystem.stat({
-            path: newPath,
-            directory: Directory.ExternalStorage
-          });
-          
-          // If we got here, the file exists at this location
-          console.log(`Found file at alternative location: ${newPath}`);
-          return newPath;
-        } catch (error) {
-          console.log(`File not found at: ${newPath}`);
-        }
+      // Special handling for known problematic file
+      // First try DOCUMENTS directory
+      try {
+        const docPath = `/DOCUMENTS/music/${filename}`;
+        await Filesystem.stat({
+          path: docPath.replace('/DOCUMENTS/', ''),
+          directory: Directory.Documents
+        });
+        console.log('Found file in Documents:', docPath);
+        return docPath;
+      } catch (e) {
+        console.log('File not found in Documents directory');
       }
       
-      // As a fallback for this specific file, try to create a copy in the Documents directory
+      // Try external storage
       try {
-        console.log('Attempting to copy problematic file to DOCUMENTS directory');
-        // First try to find it in any location
-        for (const dir of ['/DATA/music/', '/storage/emulated/0/Music/']) {
-          try {
-            const sourcePath = dir + filename;
-            // Try to read the file from source
-            const fileData = await Filesystem.readFile({
-              path: sourcePath,
-              directory: Directory.ExternalStorage
-            });
-            
-            // If we found it, write to the DOCUMENTS directory
-            const destPath = '/DOCUMENTS/music/' + filename;
-            await this.createDirectorySafe('music', Directory.Documents);
-            
-            // Write the file to Documents directory
-            await Filesystem.writeFile({
-              path: 'music/' + filename,
-              data: fileData.data,
-              directory: Directory.Documents
-            });
-            
-            console.log(`Successfully copied file to: ${destPath}`);
-            return destPath;
-          } catch (e: any) {
-            console.log(`Could not copy from ${dir}: ${e.message}`);
-          }
+        const extPath = `/storage/emulated/0/Music/${filename}`;
+        await Filesystem.stat({
+          path: extPath,
+          directory: Directory.ExternalStorage
+        });
+        console.log('Found file in external storage:', extPath);
+        return extPath;
+      } catch (e) {
+        console.log('File not found in external storage');
+      }
+    }
+    
+    // Systematically try all possible directories
+    for (const baseDir of possibleDirs) {
+      try {
+        const testPath = baseDir + filename;
+        console.log('Trying path:', testPath);
+        
+        // Determine the appropriate directory type based on the path
+        let directory = Directory.Data;
+        if (baseDir.startsWith('/DOCUMENTS/')) {
+          directory = Directory.Documents;
+        } else if (baseDir.includes('/storage/emulated/0/') || baseDir.startsWith('/storage/')) {
+          directory = Directory.ExternalStorage;
         }
-      } catch (copyError) {
-        console.error('Error during file copy attempt:', copyError);
-      }
-    }
-    
-    // Try different variations of the path
-    // 1. Try replacing DATA with DOCUMENTS
-    if (track.pathOrUrl.includes('/DATA/')) {
-      const altPath = track.pathOrUrl.replace('/DATA/', '/DOCUMENTS/');
-      console.log(`Trying DATA to DOCUMENTS replacement: ${altPath}`);
-      try {
+        
+        // Strip the directory prefix for the stat call
+        const statPath = testPath
+          .replace('/DOCUMENTS/', '')
+          .replace('/storage/emulated/0/', '')
+          .replace('/storage/', '');
+        
         await Filesystem.stat({
-          path: altPath,
-          directory: Directory.ExternalStorage
+          path: statPath,
+          directory
         });
-        console.log(`File found at: ${altPath}`);
-        return altPath;
-      } catch (error) {
-        console.log(`File not found at: ${altPath}`);
-        // File not found, continue with other attempts
+        
+        console.log('Found file at:', testPath);
+        return testPath;
+      } catch (e) {
+        // File not found in this location, continue to next
+        console.log(`File not found at ${baseDir}`);
       }
     }
     
-    // 2. Try all possible directory structures
-    for (const dir of possibleDirs) {
-      const altPath = dir + filename;
-      console.log(`Trying path: ${altPath}`);
-      try {
-        await Filesystem.stat({
-          path: altPath,
-          directory: Directory.ExternalStorage
-        });
-        console.log(`File found at: ${altPath}`);
-        return altPath;
-      } catch (error) {
-        console.log(`File not found at: ${altPath}`);
-        // File not found, continue with other attempts
-      }
-    }
-    
-    // 3. For Android 10+, try using content:// URI as a last resort
-    if (this.platform.is('android')) {
-      try {
-        // This is a speculative approach - we're hoping the file might be accessible via content URI
-        const contentPath = `content://media/external/audio/media/${track.id}`;
-        console.log(`Trying content URI path: ${contentPath}`);
-        return contentPath;
-      } catch (error) {
-        console.log('Could not create content URI');
-      }
-    }
-    
-    console.log('No alternative path found after trying all options');
-    // No alternative found
+    // If we get here, we couldn't find the file in any location
+    console.warn('Could not find alternative path for:', filename);
     return null;
   }
   
@@ -1175,5 +1152,148 @@ export class MediaPlayerService {
       console.error('Error saving file to music directory:', error);
       throw error;
     }
+  }
+
+  /**
+   * Add a local audio track by processing a file
+   * Handles upload, conversion, save, and metadata extraction
+   */
+  async addLocalTrack(file: File): Promise<Track> {
+    try {
+      // Create a unique ID for the track
+      const trackId = uuidv4();
+      
+      // Generate a safe filename with the original extension
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'mp3';
+      const fileName = `${trackId}.${fileExt}`;
+      
+      // Extract metadata from the audio file
+      const metadata = await this.extractAudioMetadata(file);
+      
+      // First create the directory if it doesn't exist
+      await this.createDirectorySafe('music', Directory.Documents);
+      
+      // Convert file to base64
+      const base64Data = await this.fileToBase64(file);
+      
+      // Save the file to the filesystem
+      const result = await Filesystem.writeFile({
+        path: `music/${fileName}`,
+        data: base64Data,
+        directory: Directory.Documents
+      });
+      
+      // Create track object
+      const track: Track = {
+        id: trackId,
+        title: metadata.title || file.name.replace(`.${fileExt}`, ''),
+        artist: metadata.artist || 'Unknown Artist',
+        album: metadata.album || 'Unknown Album',
+        artwork: metadata.artwork || 'assets/placeholder-album.png',
+        source: 'local',
+        pathOrUrl: result.uri,
+        duration: metadata.duration || 0,
+        addedAt: new Date().toISOString(),
+        type: fileExt
+      };
+      
+      // Save track metadata in data service
+      await this.dataService.saveLocalMusic(track, result.uri);
+      
+      return track;
+    } catch (error) {
+      console.error('Error adding local track:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Extract metadata from an audio file
+   */
+  private async extractAudioMetadata(file: File): Promise<{
+    title?: string;
+    artist?: string;
+    album?: string;
+    artwork?: string;
+    duration?: number;
+  }> {
+    return new Promise((resolve) => {
+      // Create an audio element to read metadata
+      const audio = new Audio();
+      const url = URL.createObjectURL(file);
+      
+      // Set up event listeners
+      audio.addEventListener('loadedmetadata', () => {
+        // Get basic metadata
+        const duration = audio.duration;
+        
+        // Attempt to extract filename-based metadata
+        const fileNameInfo = this.extractMetadataFromFilename(file.name);
+        
+        resolve({
+          title: fileNameInfo.title,
+          artist: fileNameInfo.artist,
+          duration: duration || 0
+        });
+        
+        // Clean up
+        URL.revokeObjectURL(url);
+      });
+      
+      audio.addEventListener('error', () => {
+        console.error('Error loading audio for metadata extraction');
+        // If we can't load the audio, try to extract info from filename
+        const fileNameInfo = this.extractMetadataFromFilename(file.name);
+        resolve({
+          title: fileNameInfo.title,
+          artist: fileNameInfo.artist
+        });
+        URL.revokeObjectURL(url);
+      });
+      
+      // Load the audio
+      audio.src = url;
+      audio.load();
+    });
+  }
+  
+  /**
+   * Convert a File object to base64 string
+   */
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        // Remove the data URL prefix if present
+        const base64Data = base64String.split(',')[1] || base64String;
+        resolve(base64Data);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  
+  /**
+   * Convert base64 to Blob
+   */
+  private base64ToBlob(base64: string, contentType: string = ''): Blob {
+    const sliceSize = 512;
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      const slice = byteCharacters.slice(offset, offset + sliceSize);
+      const byteNumbers = new Array(slice.length);
+      
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, { type: contentType });
   }
 }

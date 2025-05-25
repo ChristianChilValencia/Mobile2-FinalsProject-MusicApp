@@ -4,17 +4,17 @@ import { FormsModule } from '@angular/forms';
 
 import { IonicModule } from '@ionic/angular';
 
-import { LocalAudioPageRoutingModule } from './local-audio-routing.module';
+import { UploadsPageRoutingModule } from './uploads-routing.module';
 
-import { LocalAudioPage } from './local-audio.page';
+import { UploadsPage } from './uploads.page';
 
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
-    LocalAudioPageRoutingModule
+    UploadsPageRoutingModule
   ],
-  declarations: [LocalAudioPage]
+  declarations: [UploadsPage]
 })
-export class LocalAudioPageModule {}
+export class UploadsPageModule {}

@@ -20,8 +20,8 @@ const routes: Routes = [
         loadChildren: () => import('../pages/library/library.module').then(m => m.LibraryPageModule)
       },
       {
-        path: 'local-audio',
-        loadChildren: () => import('../pages/local-audio/local-audio.module').then(m => m.LocalAudioPageModule)
+        path: 'uploads',
+        loadChildren: () => import('../pages/uploads/uploads.module').then(m => m.UploadsPageModule)
       },
       {
         path: 'playlist/:id',

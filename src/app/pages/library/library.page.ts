@@ -286,9 +286,8 @@ export class LibraryPage implements OnInit {  tracks: Track[] = [];
   openPlaylist(playlist: Playlist) {
     this.navController.navigateForward(`/tabs/playlist/${playlist.id}`);
   }
-
-  navigateToLocalAudio() {
-    this.navController.navigateForward('/tabs/local-audio');
+  navigateToUploads() {
+    this.navController.navigateForward('/tabs/uploads');
   }
 
   navigateToSearch() {
@@ -303,11 +302,10 @@ export class LibraryPage implements OnInit {  tracks: Track[] = [];
           this.createPlaylist();
           return true;
         }
-      },
-      {
+      },      {
         text: 'Upload Music',
         handler: () => {
-          this.navigateToLocalAudio();
+          this.navigateToUploads();
           return true;
         }
       }

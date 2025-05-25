@@ -12,12 +12,12 @@ interface PendingUpload {
 }
 
 @Component({
-  selector: 'app-local-audio',
-  templateUrl: './local-audio.page.html',
-  styleUrls: ['./local-audio.page.scss'],
+  selector: 'app-uploads',
+  templateUrl: './uploads.page.html',
+  styleUrls: ['./uploads.page.scss'],
   standalone: false
 })
-export class LocalAudioPage implements OnInit {
+export class UploadsPage implements OnInit {
   @ViewChild('fileInput') fileInput!: ElementRef;
   
   isDragging = false;

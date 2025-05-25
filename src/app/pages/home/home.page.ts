@@ -68,9 +68,8 @@ export class HomePage implements OnInit, OnDestroy {
   openPlaylist(playlist: Playlist) {
     this.navCtrl.navigateForward(`/tabs/playlist/${playlist.id}`);
   }
-
-  navigateToLocalAudio() {
-    this.navCtrl.navigateForward('/tabs/local-audio');
+  navigateToUploads() {
+    this.navCtrl.navigateForward('/tabs/uploads');
   }
 
   navigateToSearch() {

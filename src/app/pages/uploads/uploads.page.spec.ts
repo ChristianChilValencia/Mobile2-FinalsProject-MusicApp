@@ -1,12 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { LocalAudioPage } from './local-audio.page';
+import { UploadsPage } from './uploads.page';
 
-describe('LocalAudioPage', () => {
-  let component: LocalAudioPage;
-  let fixture: ComponentFixture<LocalAudioPage>;
+describe('UploadsPage', () => {
+  let component: UploadsPage;
+  let fixture: ComponentFixture<UploadsPage>;
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(LocalAudioPage);
+    fixture = TestBed.createComponent(UploadsPage);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

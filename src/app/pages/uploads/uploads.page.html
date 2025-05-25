@@ -26,7 +26,7 @@
       <ion-list>
         <ion-item *ngFor="let track of recentlyAddedTracks">
           <ion-thumbnail slot="start">
-            <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+            <img [src]="track.artwork || 'assets/img/default-cover.svg'" alt="Album Art">
           </ion-thumbnail>
           <ion-label>
             <h2>{{ track.title }}</h2>

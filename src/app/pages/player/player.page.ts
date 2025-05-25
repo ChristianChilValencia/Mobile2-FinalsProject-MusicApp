@@ -73,10 +73,11 @@ export class PlayerPage implements OnInit, OnDestroy {
   previousTrack() {
     this.mediaPlayerService.previous();
   }
-
   onSeekChange(event: any) {
     const newPosition = event.detail.value;
-    this.mediaPlayerService.seek(newPosition);
+    // Make sure the position is within our 30-second limit
+    const limitedPosition = Math.min(newPosition, 30);
+    this.mediaPlayerService.seek(limitedPosition);
   }
 
   onVolumeChange(event: any) {

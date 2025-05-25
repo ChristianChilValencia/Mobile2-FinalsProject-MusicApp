@@ -12,10 +12,9 @@
       </ion-button>
     </div>
   </div>
-  
-  <ion-range 
+    <ion-range 
     [value]="playbackState.currentTime" 
-    [max]="playbackState.duration || 1"
+    [max]="30"
     (ionChange)="onSeekChange($event)"
     (click)="$event.stopPropagation()"
     class="seek-bar">

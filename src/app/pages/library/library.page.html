@@ -74,8 +74,7 @@
         <p *ngIf="sourceFilter === 'local'">Add local music from the upload page</p>
         <p *ngIf="sourceFilter === 'stream'">Search for streaming music on the search page</p>
         <p *ngIf="sourceFilter === 'all'">Start by adding music to your library</p>
-        
-        <ion-button *ngIf="sourceFilter === 'local'" expand="block" (click)="navigateToLocalAudio()">
+          <ion-button *ngIf="sourceFilter === 'local'" expand="block" (click)="navigateToUploads()">
           <ion-icon slot="start" name="cloud-upload"></ion-icon>
           Upload Music
         </ion-button>

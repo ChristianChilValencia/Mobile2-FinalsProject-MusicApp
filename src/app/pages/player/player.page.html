@@ -26,15 +26,13 @@
     </div>
     
     <!-- Seek Bar Section -->
-    <div class="seek-controls">
-      <div class="time-display">
+    <div class="seek-controls">      <div class="time-display">
         <div class="current-time">{{ formatTime(playbackState.currentTime) }}</div>
-        <div class="total-time">{{ formatTime(playbackState.duration) }}</div>
-      </div>
-      <ion-range
+        <div class="total-time">0:30</div>
+      </div><ion-range
         [value]="playbackState.currentTime"
         (ionChange)="onSeekChange($event)"
-        [max]="playbackState.duration || 1"
+        [max]="30"
         class="seek-bar">
       </ion-range>
     </div>

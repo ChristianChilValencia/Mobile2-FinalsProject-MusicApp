@@ -36,19 +36,19 @@ export class MediaPlayerService {
   });
   
   playbackState$ = this.playbackStateSubject.asObservable();
-
   constructor(private platform: Platform, private dataService: DataService) {
     this.initializeAudio();
     
-    // Update playback state regularly
+    // Update playback state regularly for web audio
     setInterval(() => {
-      if (this.audio && !this.isNative) {
+      if (this.audio && !this.isNative && this.playbackStateSubject.value.isPlaying) {
+        const currentTime = Math.min(this.audio.currentTime, 30); // Cap at 30 seconds
         this.updatePlaybackState({
-          currentTime: this.audio.currentTime,
+          currentTime: currentTime,
           duration: this.audio.duration || 0
         });
       }
-    }, 500);
+    }, 100); // Update more frequently for smoother progress
   }
 
   private initializeAudio(): void {
@@ -59,9 +59,7 @@ export class MediaPlayerService {
       this.audio = new Audio();
       this.setupAudioEvents();
     }
-  }
-
-  async play(track?: Track): Promise<void> {
+  }  async play(track?: Track): Promise<void> {
     try {
       if (track) {
         // If a track is provided, play that specific track
@@ -70,6 +68,8 @@ export class MediaPlayerService {
         // Otherwise continue with current track if available
         if (this.isNative) {
           await NativeAudio.play({ assetId: this.currentTrackId });
+          // Always restart progress tracking for native audio when playing
+          this.startProgressTracking();
         } else if (this.audio) {
           await this.audio.play();
         }
@@ -91,10 +91,11 @@ export class MediaPlayerService {
           navigator.mediaSession.setActionHandler('play', () => this.play());
           navigator.mediaSession.setActionHandler('pause', () => this.pause());
           navigator.mediaSession.setActionHandler('previoustrack', () => this.previous());
-          navigator.mediaSession.setActionHandler('nexttrack', () => this.next());
-          navigator.mediaSession.setActionHandler('seekto', (details) => {
+          navigator.mediaSession.setActionHandler('nexttrack', () => this.next());          navigator.mediaSession.setActionHandler('seekto', (details) => {
             if (details.seekTime !== undefined) {
-              this.seek(details.seekTime);
+              // Limit seek time to 30 seconds
+              const limitedSeekTime = Math.min(details.seekTime, 30);
+              this.seek(limitedSeekTime);
             }
           });
         }
@@ -103,15 +104,16 @@ export class MediaPlayerService {
       console.error('Error playing track:', error);
       throw error;
     }
-  }
-
-  pause(): void {
+  }  pause(): void {
     if (this.isNative && this.currentTrackId) {
       NativeAudio.pause({ assetId: this.currentTrackId });
+      // Stop progress tracking when paused
+      this.stopProgressTracking();
     } else if (this.audio) {
       this.audio.pause();
     }
     
+    // Always update the isPlaying state to false when paused
     this.updatePlaybackState({ isPlaying: false });
   }
 
@@ -122,16 +124,43 @@ export class MediaPlayerService {
     } else {
       this.play();
     }
-  }
-
-  seek(position: number): void {
+  }  seek(position: number): void {
+    // Limit position to 30 seconds
+    const limitedPosition = Math.min(position, 30);
+    
     if (this.isNative && this.currentTrackId) {
-      // Native audio doesn't support seeking directly
-      // We would need a more complex implementation with plugin-specific features
-      console.warn('Seeking not fully supported in native audio');
+      if (this.nativeMedia) {
+        // Use Cordova Media's seekTo method which is properly supported
+        this.nativeMedia.seekTo(limitedPosition * 1000); // Convert to milliseconds
+        this.updatePlaybackState({ currentTime: limitedPosition });
+      } else {
+        // Try to use NativeAudio's seek capabilities where available
+        try {
+          // NativeAudio doesn't have direct seeking, so we need to restart the track
+          // at the desired position if possible
+          const trackId = this.currentTrackId; // Store in local variable to avoid null check issues
+          NativeAudio.stop({ assetId: trackId })
+            .then(() => {
+              // Some implementations support starting from a position
+              NativeAudio.play({ 
+                assetId: trackId,
+                time: limitedPosition // Some implementations might support this
+              }).catch(() => {
+                // If position parameter is not supported, just restart from beginning
+                NativeAudio.play({ assetId: trackId });
+                console.warn('Seeking with NativeAudio only supported with Cordova Media implementation');
+              });
+            });
+          
+          // Update the state to reflect the requested position
+          this.updatePlaybackState({ currentTime: limitedPosition });
+        } catch (error) {
+          console.error('Error seeking in native audio:', error);
+        }
+      }
     } else if (this.audio) {
-      this.audio.currentTime = position;
-      this.updatePlaybackState({ currentTime: position });
+      this.audio.currentTime = limitedPosition;
+      this.updatePlaybackState({ currentTime: limitedPosition });
     }
   }
 
@@ -246,6 +275,8 @@ export class MediaPlayerService {
             this.nativeMedia.stop();
             this.nativeMedia.release();
             this.nativeMedia = null;
+            // Make sure to stop progress tracking when stopping playback
+            this.stopProgressTracking();
           } catch (e) {
             console.warn('Error stopping native media:', e);
           }
@@ -529,12 +560,14 @@ export class MediaPlayerService {
     
     this.updatePlaybackState({ isPlaying: false });
   }
-
   /**
    * Handle track ended event
    */
   private onTrackEnded(): void {
     const state = this.playbackStateSubject.value;
+    
+    // Stop progress tracking for the ended track
+    this.stopProgressTracking();
     
     // Handle different repeat modes
     if (state.repeatMode === RepeatMode.One) {
@@ -550,32 +583,69 @@ export class MediaPlayerService {
       this.next();
     }
   }
-  
-  /**
+    /**
    * Start tracking progress for native media
-   */
-  private startProgressTracking(): void {
+   */  private startProgressTracking(): void {
     // Clear any existing interval
     if (this.progressInterval) {
       clearInterval(this.progressInterval);
     }
     
+    // Get current state
+    const currentState = this.playbackStateSubject.value;
+    let lastTime = currentState.currentTime || 0;
+    
     // Set up a new interval
     this.progressInterval = setInterval(() => {
       if (this.nativeMedia) {
-        // Get current position
+        // Get current position from native media
         this.nativeMedia.getCurrentPosition(
           (position: number) => {
             if (position >= 0) {
+              // Update UI with new position
               this.updatePlaybackState({ currentTime: position });
+              lastTime = position;
+            } else {
+              // If position isn't available (some devices have issues),
+              // simulate progress by incrementing lastTime
+              lastTime += 0.1; // increment by 100ms
+              // Cap at 30 seconds
+              if (lastTime > 30) {
+                lastTime = 30;
+              }
+              this.updatePlaybackState({ currentTime: lastTime });
             }
           },
           (err: any) => {
             console.warn('Error getting media position:', err);
+            // Simulate progress even on error
+            lastTime += 0.1;
+            if (lastTime > 30) {
+              lastTime = 30;
+            }
+            this.updatePlaybackState({ currentTime: lastTime });
           }
         );
+      } else if (this.isNative && this.currentTrackId) {
+        // For other native implementations without position reporting,
+        // simulate progress by incrementing the time
+        lastTime += 0.1;
+        if (lastTime > 30) {
+          lastTime = 30;
+        }
+        this.updatePlaybackState({ currentTime: lastTime });
       }
-    }, 1000);
+    }, 100); // Update more frequently for smoother progress
+  }
+  
+  /**
+   * Stop tracking progress for native media
+   */
+  private stopProgressTracking(): void {
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
+    }
   }
 
   private updatePlaybackState(update: Partial<PlaybackState>): void {

@@ -127,8 +127,7 @@ export class MediaPlayerService {
   }  seek(position: number): void {
     // Limit position to 30 seconds
     const limitedPosition = Math.min(position, 30);
-    
-    if (this.isNative && this.currentTrackId) {
+      if (this.isNative && this.currentTrackId) {
       if (this.nativeMedia) {
         // Use Cordova Media's seekTo method which is properly supported
         this.nativeMedia.seekTo(limitedPosition * 1000); // Convert to milliseconds
@@ -268,220 +267,253 @@ export class MediaPlayerService {
     });
   }  private async loadAndPlayTrack(track: Track): Promise<void> {
     try {
-      // Stop any current playback
-      if (this.isNative) {
-        if (this.nativeMedia) {
-          try {
-            this.nativeMedia.stop();
-            this.nativeMedia.release();
-            this.nativeMedia = null;
-            // Make sure to stop progress tracking when stopping playback
-            this.stopProgressTracking();
-          } catch (e) {
-            console.warn('Error stopping native media:', e);
-          }
-        }
-        
-        if (this.currentTrackId) {
-          try {
-            await NativeAudio.stop({ assetId: this.currentTrackId });
-            await NativeAudio.unload({ assetId: this.currentTrackId });
-          } catch (e) {
-            // Ignore errors from stopping/unloading, might not be loaded yet
-          }
-        }
-      } else if (this.audio) {
-        this.audio.pause();
-        this.audio.src = '';
+      if (this.currentIndex === -1) {
+        this.currentIndex = 0;
       }
+
+      // Stop current playback if any
+      await this.stopCurrentPlayback();
+
+      // Get the audio file from storage
+      const audioBlob = await this.getAudioFile(track.id);
+      const blobUrl = URL.createObjectURL(audioBlob);
+
+      // Create and configure audio element
+      this.audio = new Audio(blobUrl);
       
-      // Log the track information for debugging
-      console.log('Playing track:', {
-        id: track.id,
-        title: track.title,
-        path: track.pathOrUrl,
-        source: track.source
+      // Set up event handlers
+      this.audio.onended = () => {
+        URL.revokeObjectURL(blobUrl);
+        this.onTrackEnded();
+      };
+
+      this.audio.onerror = (error) => {
+        URL.revokeObjectURL(blobUrl);
+        console.error('Error playing audio:', error);
+      };      // Start playback
+      await this.audio.play();
+      
+      // Update playback state
+      this.updatePlaybackState({
+        currentTrack: track,
+        isPlaying: true
       });
       
-      // Handle specific problematic track IDs
-      if (track.id === 'dfbdb514-b070-458f-b1a5-cdff068fc6b9') {
-        console.log('Detected problematic track ID, redirecting to proper file location');
-        
-        // Try to find the file with a more reliable approach
-        if (track.pathOrUrl && track.pathOrUrl.includes('/DATA/music/')) {
-          // First try the DOCUMENTS directory instead
-          track.pathOrUrl = track.pathOrUrl.replace('/DATA/music/', '/DOCUMENTS/music/');
-          console.log('Redirected to:', track.pathOrUrl);
-          
-          // Check if the file exists at the new location
-          try {
-            await Filesystem.stat({
-              path: track.pathOrUrl.replace('/DOCUMENTS/', ''),
-              directory: Directory.Documents
-            });
-            console.log('File exists at redirected location');
-          } catch (e) {
-            // If not found in Documents, look for an alternative path
-            const alternativePath = await this.findAlternativeFilePath(track);
-            if (alternativePath) {
-              track.pathOrUrl = alternativePath;
-              console.log('Using alternative path for problematic file:', alternativePath);
-            } else {
-              console.warn('Could not find alternative path for problematic file');
-            }
-          }
-        }
-      }
-      
+      // Update current track ID
       this.currentTrackId = track.id;
       
-      if (this.isNative) {
-        // Try to use Cordova Media for local files (better for large files)
-        if (track.source === 'local' && typeof Media !== 'undefined') {
-          try {
-            // Clean and normalize the file path for Cordova Media
-            const filePath = this.getNormalizedFilePath(track.pathOrUrl);
-            console.log('Using Cordova Media with path:', filePath);
-            
-            this.nativeMedia = new Media(
-              filePath,
-              // Success callback
-              () => {
-                console.log('Media playback finished successfully');
-                this.onTrackEnded();
-              },
-              // Error callback
-              (err: any) => {
-                console.error('Media playback error:', err);
-                this.updatePlaybackState({ isPlaying: false });
-                
-                // Try alternative approach if Cordova Media fails
-                this.handleMediaPlaybackError(track, 'cordova-media');
-              },
-              // Status callback
-              (status: number) => {
-                console.log('Media status:', status);
-              }
-            );
-            
-            // Start playing
-            this.nativeMedia.play();
-            
-            // Get duration
-            this.nativeMedia.getDuration((duration: number) => {
-              if (duration > 0) {
-                this.updatePlaybackState({ duration });
-              }
-            });
-            
-            // Start progress tracking
-            this.startProgressTracking();
-            
-            this.updatePlaybackState({
-              isPlaying: true,
-              currentTrack: track,
-              currentTime: 0,
-              duration: track.duration || 0
-            });
-            return;
-          } catch (e) {
-            console.warn('Error using Cordova Media, falling back to NativeAudio:', e);
-            this.nativeMedia = null;
-          }
-        }
-        
-        // Fall back to NativeAudio
-        try {
-          // For local files, use native audio for better performance
-          if (track.source === 'local') {
-            // Normalize the file path
-            const filePath = this.getNormalizedFilePath(track.pathOrUrl);
-            console.log('Using NativeAudio with path:', filePath);
-            
-            await NativeAudio.preload({
-              assetId: track.id,
-              assetPath: filePath,
-              audioChannelNum: 1,
-              isUrl: filePath.startsWith('http') || filePath.startsWith('file://') || filePath.startsWith('content://')
-            });
-          } else {
-            // For streaming, we need to use the URL
-            console.log('Using NativeAudio with streaming URL:', track.pathOrUrl);
-            await NativeAudio.preload({
-              assetId: track.id,
-              assetPath: track.pathOrUrl,
-              audioChannelNum: 1,
-              isUrl: true
-            });
-          }
-          
-          await NativeAudio.setVolume({ assetId: track.id, volume: this.volume });
-          await NativeAudio.play({ assetId: track.id });
-          
-          // For native audio, we need to manually handle the duration
-          this.updatePlaybackState({
-            isPlaying: true,
-            currentTrack: track,
-            currentTime: 0,
-            duration: track.duration || 0
-          });
-        } catch (e) {
-          console.error('Error with NativeAudio, falling back to HTML Audio:', e);
-          this.isNative = false;
-          
-          // Try with web audio as a fallback
-          this.handleMediaPlaybackError(track, 'native-audio');
-        }
-      }
-      
-      // Fallback to web audio
-      if (!this.isNative) {
-        if (!this.audio) {
-          this.audio = new Audio();
-          this.setupAudioEvents();
-        }
-        
-        // Normalize the file path for web audio
-        const filePath = this.getNormalizedFilePath(track.pathOrUrl);
-        console.log('Using Web Audio with path:', filePath);
-        
-        this.audio.src = filePath;
-        this.audio.volume = this.volume;
-        await this.audio.play();
-        
-        this.updatePlaybackState({
-          isPlaying: true,
-          currentTrack: track,
-          currentTime: 0,
-          duration: track.duration || 0
-        });
-      }
     } catch (error) {
-      console.error('Error loading and playing track:', error);
-      console.error('Problem with track:', {
-        id: track.id,
-        title: track.title,
-        source: track.source,
-        path: track.pathOrUrl
-      });
-      
-      // Try to find an alternative path for the file
-      const alternativePath = await this.findAlternativeFilePath(track);
-      if (alternativePath) {
-        console.log('Found alternative path, retrying with:', alternativePath);
-        track.pathOrUrl = alternativePath;
-        try {
-          return await this.loadAndPlayTrack(track);
-        } catch (retryError) {
-          console.error('Still failed after trying alternative path:', retryError);
-        }
-      }
-      
-      // Try to recover by attempting to play with web audio as last resort
-      await this.handleMediaPlaybackError(track, 'final-fallback');
+      console.error('Error loading track:', error);
+      throw error;
     }
   }
-  
+
+  /**
+   * Store an audio file in storage
+   */
+  private async storeAudioFile(file: File | Blob, trackId: string): Promise<void> {
+    if (this.platform.is('capacitor')) {
+      const base64Data = await this.blobToBase64(file);
+      await Filesystem.writeFile({
+        path: `audio/${trackId}`,
+        data: base64Data,
+        directory: Directory.Data
+      });
+    } else {
+      await this.storeFileInIndexedDB(trackId, file);
+    }
+  }
+
+  /**
+   * Convert blob to base64
+   */
+  private async blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        resolve(base64String.split(',')[1]); // Remove data URL prefix
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private base64ToBlob(base64: string, contentType: string = 'audio/wav'): Blob {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: contentType });
+  }
+
+  /**
+   * Initialize IndexedDB database
+   */
+  private async initializeIndexedDB(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      const openRequest = indexedDB.open('AudioFiles', 2); // Increment version to force upgrade
+
+      openRequest.onupgradeneeded = (event) => {
+        console.log('Upgrading IndexedDB');
+        const db = (event.target as IDBOpenDBRequest).result;
+        
+        // If the store exists, delete it and recreate
+        if (db.objectStoreNames.contains('files')) {
+          db.deleteObjectStore('files');
+        }
+        
+        // Create the store
+        console.log('Creating files object store');
+        db.createObjectStore('files');
+      };
+
+      openRequest.onerror = () => {
+        console.error('Error opening IndexedDB:', openRequest.error);
+        reject(openRequest.error);
+      };
+
+      openRequest.onsuccess = () => {
+        const db = openRequest.result;
+        console.log('IndexedDB opened successfully');
+        resolve(db);
+      };
+    });
+  }
+
+  /**
+   * Store file in IndexedDB
+   */  private async storeFileInIndexedDB(trackId: string, file: File | Blob): Promise<void> {
+    try {
+      const db = await this.initializeIndexedDB();
+      
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('files', 'readwrite');
+          const store = tx.objectStore('files');
+          
+          const storeRequest = store.put(file, trackId);
+          
+          storeRequest.onerror = () => {
+            console.error('Error storing file:', storeRequest.error);
+            reject(storeRequest.error);
+          };
+          
+          storeRequest.onsuccess = () => {
+            console.log('File stored successfully');
+            resolve();
+          };
+
+          tx.oncomplete = () => {
+            console.log('Transaction completed');
+            db.close();
+          };
+          
+          tx.onerror = () => {
+            console.error('Transaction error:', tx.error);
+            reject(tx.error);
+          };
+        } catch (error) {
+          console.error('Error in transaction:', error);
+          reject(error);
+        }
+      });
+    } catch (error) {
+      console.error('Error initializing IndexedDB:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a file from storage
+   */
+  private async getAudioFile(trackId: string): Promise<Blob> {
+    if (this.platform.is('capacitor')) {
+      const result = await Filesystem.readFile({
+        path: `audio/${trackId}`,
+        directory: Directory.Data
+      });
+      
+      if (typeof result.data === 'string') {
+        return this.base64ToBlob(result.data, 'audio/wav');
+      } else {
+        // If it's already a Blob, return it
+        return result.data as Blob;
+      }
+    } else {
+      return this.getFileFromIndexedDB(trackId);
+    }
+  }
+
+  /**
+   * Get file from IndexedDB
+   */  private async getFileFromIndexedDB(trackId: string): Promise<Blob> {
+    try {
+      const db = await this.initializeIndexedDB();
+      
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('files', 'readonly');
+          const store = tx.objectStore('files');
+          
+          const getRequest = store.get(trackId);
+          
+          getRequest.onerror = () => {
+            console.error('Error getting file:', getRequest.error);
+            reject(getRequest.error);
+          };
+          
+          getRequest.onsuccess = () => {
+            if (getRequest.result) {
+              console.log('File retrieved successfully');
+              resolve(getRequest.result);
+            } else {
+              console.error('File not found in IndexedDB');
+              reject(new Error('File not found'));
+            }
+          };
+
+          tx.oncomplete = () => {
+            console.log('Transaction completed');
+            db.close();
+          };
+          
+          tx.onerror = () => {
+            console.error('Transaction error:', tx.error);
+            reject(tx.error);
+          };
+        } catch (error) {
+          console.error('Error in transaction:', error);
+          reject(error);
+        }
+      });
+    } catch (error) {
+      console.error('Error initializing IndexedDB:', error);
+      throw error;
+    }
+  }
+
+  private async stopCurrentPlayback(): Promise<void> {
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.src = '';
+      this.stopProgressTracking();
+    }
+    
+    if (this.currentTrackId) {
+      try {
+        await NativeAudio.stop({ assetId: this.currentTrackId });
+        await NativeAudio.unload({ assetId: this.currentTrackId });
+      } catch (e) {
+        // Ignore errors from stopping/unloading
+      }
+    }
+  }
+
   /**
    * Handle media playback errors by trying different approaches
    */
@@ -679,21 +711,17 @@ export class MediaPlayerService {
   /**
    * Audio file extensions to scan for
    */
-  private readonly audioExtensions = [
-    'mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac', 'opus'
-  ];
+  private audioExtensions = ['mp3', 'wav', 'ogg', 'm4a', 'aac'];
   
   /**
    * Common directories to scan for audio files
    */
-  private readonly directoriesToScan = [
-    '/Music',
-    '/Download',
-    '/DCIM',
+  private directoriesToScan = [
+    'Music',
+    'Download',
+    'DCIM/Audio',
     '/storage/emulated/0/Music',
     '/storage/emulated/0/Download',
-    '/storage/emulated/0/DCIM',
-    '/storage/emulated/0/Android/media'
   ];
 
   /**
@@ -897,7 +925,9 @@ export class MediaPlayerService {
         // Find current track in original queue
       if (currentTrack) {
         this.currentIndex = this.queue.findIndex(t => t.id === currentTrack.id);
-        if (this.currentIndex === -1) this.currentIndex = 0;
+        if (this.currentIndex === -1) {
+      this.currentIndex = 0;
+    }
       }
     }
     
@@ -1272,28 +1302,5 @@ export class MediaPlayerService {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-  }
-  
-  /**
-   * Convert base64 to Blob
-   */
-  private base64ToBlob(base64: string, contentType: string = ''): Blob {
-    const sliceSize = 512;
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-
-    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-      const slice = byteCharacters.slice(offset, offset + sliceSize);
-      const byteNumbers = new Array(slice.length);
-      
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
-      }
-      
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-    }
-
-    return new Blob(byteArrays, { type: contentType });
   }
 }

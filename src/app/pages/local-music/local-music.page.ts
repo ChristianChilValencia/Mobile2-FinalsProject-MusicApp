@@ -1,8 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FileScannerService } from '../../services/file-scanner.service';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { DataService } from '../../services/data.service';
-import { Track, PlaybackState } from '../../models/track.model';
+import { DataService, Track, PlaybackState } from '../../services/data.service';
 import { Subscription } from 'rxjs';
 import { ToastController, AlertController, NavController } from '@ionic/angular';
 

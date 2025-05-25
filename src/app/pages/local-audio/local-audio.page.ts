@@ -1,9 +1,8 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { ToastController } from '@ionic/angular';
 import { v4 as uuidv4 } from 'uuid';
-import { Track } from '../../models/track.model';
+import { DataService, Track } from '../../services/data.service';
 import { StorageService } from '../../services/storage.service';
-import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 
 interface PendingUpload {

@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActionSheetController, AlertController, NavController, ToastController } from '@ionic/angular';
-import { DataService } from '../../services/data.service';
+import { DataService, Track, Playlist } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { Track, Playlist } from '../../models/track.model';
 
 @Component({
   selector: 'app-library',

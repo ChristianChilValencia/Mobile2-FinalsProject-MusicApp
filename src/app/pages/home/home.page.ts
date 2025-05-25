@@ -1,8 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
-import { Track, Playlist } from '../../models/track.model';
-import { DataService } from '../../services/data.service';
+import { DataService, Track, Playlist } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 
 @Component({

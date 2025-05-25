@@ -2,8 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActionSheetController, ToastController, NavController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { DataService } from '../../services/data.service';
-import { PlaybackState, Track, RepeatMode } from '../../models/track.model';
+import { DataService, PlaybackState, Track, RepeatMode } from '../../services/data.service';
 import { trigger, state, style, animate, transition } from '@angular/animations';
 
 @Component({

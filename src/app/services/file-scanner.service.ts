@@ -2,8 +2,7 @@ import { Injectable } from '@angular/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Platform } from '@ionic/angular';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Track } from '../models/track.model';
-import { DataService } from './data.service';
+import { DataService, Track } from './data.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({

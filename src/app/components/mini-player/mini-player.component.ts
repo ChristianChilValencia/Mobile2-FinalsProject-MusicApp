@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { PlaybackState, Track } from '../../models/track.model';
+import { PlaybackState, Track } from '../../services/data.service';
 import { Subscription } from 'rxjs';
 
 @Component({

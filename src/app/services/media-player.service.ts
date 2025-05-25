@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-import { Track, PlaybackState, RepeatMode } from '../models/track.model';
 import { BehaviorSubject, Observable, fromEvent } from 'rxjs';
 import { NativeAudio } from '@capacitor-community/native-audio';
-import { DataService } from './data.service';
+import { DataService, Track, PlaybackState, RepeatMode } from './data.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 

@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ActionSheetController, AlertController, NavController, ToastController } from '@ionic/angular';
-import { Track, Playlist } from '../../models/track.model';
-import { DataService } from '../../services/data.service';
+import { DataService, Track, Playlist } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 
 @Component({

@@ -3,7 +3,7 @@ import { ActionSheetController, ToastController } from '@ionic/angular';
 import { DeezerService } from '../../services/deezer.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService } from '../../services/data.service';
-import { Track, Playlist } from '../../models/track.model';
+import { Track, Playlist } from '../../services/data.service';
 import { finalize } from 'rxjs/operators';
 
 @Component({

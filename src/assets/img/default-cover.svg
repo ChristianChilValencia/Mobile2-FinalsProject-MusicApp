@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512">
+      <stop offset="0%" stop-color="#8e44ad"/>
+      <stop offset="100%" stop-color="#2980b9"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="glow"/>
+      <feBlend in="SourceGraphic" in2="glow" mode="normal"/>
+    </filter>
+  </defs>
+
+    <!-- Background -->
+    <rect width="512" height="512" rx="64" fill="url(#bg)"/>
+
+    <!-- Music note and wave design -->
+    <g filter="url(#glow)" opacity="0.9">
+        <!-- Stylized music note -->
+        <path d="M320 140C320 134.477 324.477 130 330 130H390C395.523 130 400 134.477 400 140V220C400 225.523 395.523 230 390 230H330C324.477 230 320 225.523 320 220V140Z" fill="white"/>
+        <path d="M340 220V350C340 372.091 322.091 390 300 390C277.909 390 260 372.091 260 350C260 327.909 277.909 310 300 310C307.071 310 313.744 311.765 319.549 314.901C323.453 317.098 330 321.477 330 330V140" stroke="white" stroke-width="24" stroke-linecap="round"/>
+        
+        <!-- Sound waves -->
+        <path d="M112 256C112 176.471 176.471 112 256 112" stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.3"/>
+        <path d="M144 256C144 194.157 194.157 144 256 144" stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.5"/>
+        <path d="M176 256C176 211.843 211.843 176 256 176" stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.7"/>
+        <path d="M208 256C208 229.529 229.529 208 256 208" stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.9"/>
+    </g>
+
+    <!-- VibeFlow text -->
+    <text x="256" y="450" fill="white" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle">VibeFlow</text>
+</svg>

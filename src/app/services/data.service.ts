@@ -1,9 +1,50 @@
 import { Injectable } from '@angular/core';
 import { StorageService } from './storage.service';
-import { Track, Playlist } from '../models/track.model';
 import { v4 as uuidv4 } from 'uuid';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
+
+// Define Track and Playlist interfaces directly in the service
+export interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  artwork?: string | null;
+  duration?: number;
+  pathOrUrl: string;
+  source: 'local' | 'stream';
+  addedAt: string;
+  type?: string;
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  description?: string;
+  trackIds: string[];
+  coverArt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlaybackState {
+  isPlaying: boolean;
+  currentTrack: Track | null;
+  currentTime: number;
+  duration: number;
+  volume: number;
+  queue: Track[];
+  currentIndex: number;
+  isShuffleActive: boolean;
+  repeatMode: RepeatMode;
+}
+
+export enum RepeatMode {
+  None = 'none',
+  One = 'one',
+  All = 'all'
+}
 
 @Injectable({
   providedIn: 'root'

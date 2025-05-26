@@ -1,9 +1,9 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { AlertController } from '@ionic/angular';
-import { MediaPlayerService, Track } from '../services/media-player.service';
-import { DataService } from '../services/data.service';
+import { MediaPlayerService, Track } from '../../local-services/media-player.service';
+import { DataService } from '../../local-services/data.service';
 import { firstValueFrom, Subscription } from 'rxjs';
-import { ConfigService } from '../services/config.service';
+import { ConfigService } from '../../local-services/config.service';
 import { Router } from '@angular/router';
 
 interface Playlist {

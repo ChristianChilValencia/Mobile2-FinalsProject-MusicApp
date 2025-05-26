@@ -1,9 +1,9 @@
 import { Component, OnInit, OnDestroy, NgZone, ViewChild } from '@angular/core';
 import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { MediaPlayerService, Track } from '../services/media-player.service'; // Update these imports
-import { ConfigService } from '../services/config.service'; // Update these imports
-import { DataService } from '../services/data.service'; // Update these imports
+import { MediaPlayerService, Track } from '../../local-services/media-player.service'; // Update these imports
+import { ConfigService } from '../../local-services/config.service'; // Update these imports
+import { DataService } from '../../local-services/data.service'; // Update these imports
 import { AlertController, ToastController } from '@ionic/angular';
 
 @Component({

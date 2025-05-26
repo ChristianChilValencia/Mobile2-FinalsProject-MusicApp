@@ -1,5 +1,5 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { MediaPlayerService, Track } from '../services/media-player.service';
+import { MediaPlayerService, Track } from '../../local-services/media-player.service';
 import { Router } from '@angular/router';
 
 @Component({

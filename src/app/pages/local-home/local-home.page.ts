@@ -11,9 +11,9 @@ import {
   LoadingController,
   Platform
 } from '@ionic/angular';
-import { MediaPlayerService, Track } from '../services/media-player.service';
-import { DataService } from '../services/data.service';
-import { ConfigService } from '../services/config.service';
+import { MediaPlayerService, Track } from '../../local-services/media-player.service';
+import { DataService } from '../../local-services/data.service';
+import { ConfigService } from '../../local-services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';

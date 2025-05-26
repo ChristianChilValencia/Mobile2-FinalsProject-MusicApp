@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
 
-import { MusicPlayerComponent } from './music-player.component';
+import { MusicPlayerComponent } from './local-music-player.component';
 
 describe('MusicPlayerComponent', () => {
   let component: MusicPlayerComponent;

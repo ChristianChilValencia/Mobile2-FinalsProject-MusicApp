@@ -2,17 +2,16 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
-import { LibraryPage } from './library.page';
-
-import { LibraryPageRoutingModule } from './library-routing.module';
+import { PlayerPage } from './local-player.page';
+import { PlayerPageRoutingModule } from './local-player-routing.module';
 
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
-    LibraryPageRoutingModule
+    PlayerPageRoutingModule
   ],
-  declarations: [LibraryPage]
+  declarations: [PlayerPage] // Only include PlayerPage here, no component
 })
-export class LibraryPageModule {}
+export class PlayerPageModule {}

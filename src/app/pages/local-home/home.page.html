@@ -1,0 +1,110 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Music Player</ion-title>
+    <ion-buttons slot="start">
+      <ion-button routerLink="/player">
+        <ion-icon name="play-circle-outline"></ion-icon>
+      </ion-button>
+            <ion-button routerLink="/music-player">
+        <ion-icon name="musical-notes-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button (click)="requestAudioPermissions(); openFileSelector()">
+        <ion-icon name="add"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/library">
+        <ion-icon name="library-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" [class.dark-mode]="isDarkMode" class="ion-padding-bottom">
+  <!-- Hidden file input -->
+  <input type="file" #fileInput style="display:none" 
+         accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.opus" 
+         multiple (change)="onFileSelected($event)">
+
+  <!-- Local Music Section -->
+  <div class="section-header">
+    <h2>Your Music</h2>
+  </div>
+
+  <div *ngIf="localMusic.length === 0" class="empty-state">
+    <ion-icon name="musical-notes"></ion-icon>
+    <h3>No local music found</h3>
+    <p>Upload music files to get started</p>
+    <div class="action-buttons">
+      <ion-button (click)="requestAudioPermissions(); openFileSelector()">
+        <ion-icon name="add"></ion-icon>
+        Add Files
+      </ion-button>
+    </div>
+  </div>
+
+  <div class="horizontal-scroll-container" *ngIf="localMusic.length > 0">
+    <div *ngFor="let track of localMusic" 
+         class="music-card" 
+         (click)="playTrack(track)">
+      <div class="album-art-container">
+        <img [src]="track.imageUrl || 'assets/music-bg.png'" 
+             [alt]="track.title" 
+             class="album-art">
+        <div class="play-overlay">
+          <ion-icon name="play"></ion-icon>
+        </div>
+      </div>
+      <div class="track-info">
+        <h3 class="track-title">{{track.title}}</h3>
+        <p class="track-artist">{{track.artist}}</p>
+      </div>
+    </div>
+  </div>
+</ion-content>
+
+<!-- Mini Player -->
+<div class="mini-player"
+     *ngIf="!hideMiniPlayer && (audioService.getCurrentTrack() | async) as currentTrack"
+     (touchstart)="onTouchStart($event)"
+     (touchmove)="onTouchMove($event)"
+     (touchend)="onTouchEnd($event)"
+     [style.transform]="'translateY(' + slideOffset + 'px)'"
+     [style.opacity]="1 - (slideOffset / 100)"
+     [class.closing]="isClosing">
+  
+  <div class="track-info" [routerLink]="['/player']">
+    <ion-thumbnail>
+      <img [src]="currentTrack.imageUrl || 'assets/music-bg.png'" [alt]="currentTrack.title">
+    </ion-thumbnail>
+    <div class="text-info">
+      <p class="title">{{currentTrack.title}}</p>
+      <p class="artist">{{currentTrack.artist}}</p>
+    </div>
+  </div>
+  
+  <div class="progress-container">
+    <span class="time-label">{{formatTime(audioService.getCurrentTime() | async)}}</span>
+    <ion-range
+      [value]="audioService.getCurrentTime() | async"
+      [min]="0"
+      [max]="(audioService.getDuration() | async) || 100"
+      (ionChange)="onRangeChange($event)"
+      dualKnobs="false"
+      class="progress-bar">
+    </ion-range>
+    <span class="time-label">{{formatTime(audioService.getDuration() | async)}}</span>
+  </div>
+  
+  <div class="controls">
+    <ion-button fill="clear" (click)="audioService.previous()">
+      <ion-icon name="play-skip-back"></ion-icon>
+    </ion-button>
+    <ion-button fill="clear" class="play-button" (click)="togglePlay()">
+      <ion-icon [name]="(audioService.getIsPlaying() | async) ? 'pause' : 'play'"></ion-icon>
+    </ion-button>
+    <ion-button fill="clear" (click)="audioService.next()">
+      <ion-icon name="play-skip-forward"></ion-icon>
+    </ion-button>
+  </div>
+</div>

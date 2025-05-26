@@ -1,0 +1,100 @@
+<ion-content [fullscreen]="true" class="now-playing">
+  <div class="now-playing-container">
+    <!-- Header -->
+    <div class="header">
+      <ion-button fill="clear" class="back-button" (click)="goBack()">
+        <ion-icon name="chevron-down-outline" size="large"></ion-icon>
+      </ion-button>
+      <div class="header-title">
+        <h2>Now Playing</h2>
+      </div>
+      <ion-button fill="clear" class="menu-button" (click)="showActionMenu($event)">
+        <ion-icon name="ellipsis-horizontal" size="large"></ion-icon>
+      </ion-button>
+    </div>
+
+    <!-- Album Art -->
+    <div class="album-container" *ngIf="currentTrack">
+      <div class="album-shadow"></div>
+      <div class="album-art-wrapper" [class.playing]="isPlaying">
+        <img [src]="currentTrack.imageUrl || 'assets/music-bg.png'"
+             [alt]="currentTrack.title"
+             class="album-art">
+      </div>
+    </div>
+
+    <!-- Track Info -->
+    <div class="track-info">
+      <h1 class="track-title">{{currentTrack?.title || 'No Track Selected'}}</h1>
+      <p class="track-artist">{{currentTrack?.artist || ''}}</p>
+      <p class="track-album" *ngIf="currentTrack?.album">{{currentTrack?.album}}</p>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container" *ngIf="currentTrack">
+      <div class="time-display">
+        <span class="current-time">{{formatTime(currentTime)}}</span>
+        <span class="total-time">{{formatTime(duration)}}</span>
+      </div>
+      <ion-range
+        class="progress-bar"
+        [min]="0"
+        [max]="duration || 0.01"
+        [value]="currentTime"
+        [class.dark-mode]="isDarkMode"
+        (ionInput)="onSeekDrag($event)"
+        (ionChange)="seek($event)">
+      </ion-range>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls" *ngIf="currentTrack">
+      <ion-button fill="clear" class="control-button previous" (click)="previous()">
+        <ion-icon name="play-skip-back" size="large"></ion-icon>
+      </ion-button>
+
+      <ion-button fill="clear" class="play-button" (click)="togglePlay()">
+        <ion-icon [name]="isPlaying ? 'pause' : 'play'" size="large"></ion-icon>
+      </ion-button>
+
+      <ion-button fill="clear" class="control-button next" (click)="next()">
+        <ion-icon name="play-skip-forward" size="large"></ion-icon>
+      </ion-button>
+    </div>
+
+    <!-- Additional Controls -->
+    <div class="additional-controls" *ngIf="currentTrack">
+      <ion-button fill="clear" class="additional-button" (click)="toggleLike()">
+        <ion-icon [name]="currentTrack.liked ? 'heart' : 'heart-outline'" 
+                 [color]="currentTrack.liked ? 'danger' : ''"
+                 size="large"></ion-icon>
+      </ion-button>
+    </div>
+
+    <!-- No Track View -->
+    <div class="no-track" *ngIf="!currentTrack">
+      <ion-icon name="musical-notes" size="large"></ion-icon>
+      <h2>No track selected</h2>
+      <p>Go to your library and select a track to play.</p>
+    </div>
+  </div>
+</ion-content>
+
+<!-- Action Sheet (Manually created for more control) -->
+<div class="custom-action-sheet" *ngIf="showActions">
+  <div class="overlay" (click)="showActions = false"></div>
+  <div class="sheet-content">
+    <div class="sheet-header">
+      <h3>Track Options</h3>
+      <ion-button fill="clear" (click)="showActions = false">
+        <ion-icon name="close"></ion-icon>
+      </ion-button>
+    </div>
+    <ion-list lines="full">
+      <ion-item *ngFor="let button of actionButtons" (click)="button.handler(); showActions = false" [color]="button.role === 'destructive' ? 'danger' : ''">
+        <ion-icon [name]="button.icon" slot="start"></ion-icon>
+        <ion-label>{{button.text}}</ion-label>
+      </ion-item>
+    </ion-list>
+  </div>
+</div>

@@ -1,0 +1,70 @@
+<!-- Mini Player Mode -->
+<div class="mini-player" 
+     *ngIf="track" 
+     [style.transform]="'translateY(' + slideOffset + 'px)'"
+     (touchstart)="onTouchStart($event)"
+     (touchmove)="onTouchMove($event)"
+     (touchend)="onTouchEnd($event)"
+     (click)="goToNowPlaying()">
+  <div class="mini-player-content">
+    <ion-thumbnail>
+      <img [src]="track.imageUrl || 'assets/music-bg.png'" alt="Album Art">
+    </ion-thumbnail>
+    <div class="track-info">
+      <h3>{{track.title}}</h3>
+      <p>{{track.artist}}</p>
+    </div>
+    <div class="mini-controls">
+      <ion-button fill="clear" (click)="onPrevious(); $event.stopPropagation()">
+        <ion-icon name="play-skip-back"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" (click)="onTogglePlay(); $event.stopPropagation()">
+        <ion-icon [name]="isPlaying ? 'pause' : 'play'"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" (click)="onNext(); $event.stopPropagation()">
+        <ion-icon name="play-skip-forward"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+</div>
+
+<!-- Full Player Mode (used in PlayerPage) -->
+<div class="full-player" *ngIf="track">
+  <div class="album-art-container">
+    <div class="album-art" [class.playing]="isPlaying">
+      <img [src]="track.imageUrl || 'assets/music-bg.png'" alt="Album Art">
+    </div>
+  </div>
+
+  <div class="track-info">
+    <h1>{{track.title}}</h1>
+    <h2>{{track.artist}}</h2>
+    <p *ngIf="track.album">{{track.album}}</p>
+  </div>
+
+  <div class="seek-container">
+    <div class="time-labels">
+      <span>{{formatTime(currentTime)}}</span>
+      <span>{{formatTime(duration)}}</span>
+    </div>
+    <ion-range 
+      [value]="currentTime" 
+      [max]="duration || 0.01" 
+      (ionChange)="onSeek($event)">
+    </ion-range>
+  </div>
+
+  <div class="playback-controls">
+    <ion-button fill="clear" size="large" (click)="onPrevious()">
+      <ion-icon name="play-skip-back"></ion-icon>
+    </ion-button>
+    <ion-button fill="clear" size="large" class="play-button" (click)="onTogglePlay()">
+      <ion-icon [name]="isPlaying ? 'pause' : 'play'"></ion-icon>
+    </ion-button>
+    <ion-button fill="clear" size="large" (click)="onNext()">
+      <ion-icon name="play-skip-forward"></ion-icon>
+    </ion-button>
+  </div>
+
+  <!-- Removed like button from secondary controls -->
+</div>

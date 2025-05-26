@@ -13,7 +13,7 @@ import {
 } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { Track } from '../../services/data.service';
-import { DataService } from '../../local-services/data.service';
+import { DataService as LocalDataService } from '../../local-services/data.service';
 import { ConfigService } from '../../local-services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
@@ -33,10 +33,9 @@ export class HomePage implements OnInit, OnDestroy {
   localMusic: Track[] = [];
   isDarkMode = false;
   private settingsSub?: Subscription;
-
   constructor(
     public audioService: MediaPlayerService,
-    private dataService: DataService,
+    private dataService: LocalDataService,
     private configService: ConfigService,
     public router: Router,
     private toastCtrl: ToastController,
@@ -65,11 +64,10 @@ export class HomePage implements OnInit, OnDestroy {
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }
-
   private async refreshLocalMusic() {
     try {
+      // Get local tracks and adapt them to the main app format
       const localTracks = await this.dataService.getLocalTracks();
-      // Convert local tracks to main app track format
       this.localMusic = localTracks.map(track => adaptLocalTrackToMainTrack(track));
       return this.localMusic;
     } catch (error) {
@@ -91,7 +89,17 @@ export class HomePage implements OnInit, OnDestroy {
     return true; // In web, permissions work differently
   }
 
-  openFileSelector() {
+  async openFileSelector() {
+    const hasPermissions = await this.requestAudioPermissions();
+    if (!hasPermissions) {
+      const toast = await this.toastCtrl.create({
+        message: 'Permission denied to access files',
+        duration: 2000,
+        color: 'danger'
+      });
+      await toast.present();
+      return;
+    }
     this.fileInput.nativeElement.click();
   }
 
@@ -100,40 +108,95 @@ export class HomePage implements OnInit, OnDestroy {
     if (!input.files?.length) return;
 
     const files = Array.from(input.files);
-    const loading = await this.loadingCtrl.create({ message: 'Uploading music…' });
+    const loading = await this.loadingCtrl.create({ 
+      message: files.length > 1 ? `Uploading ${files.length} files...` : 'Uploading file...',
+    });
     await loading.present();
+
+    const results: { success: number; failed: number } = { success: 0, failed: 0 };
+    const successfulTracks: Track[] = [];
 
     try {
       for (const file of files) {
-        // We need to adapt the local track to the main app format before adding it
-        const localTrack = await this.audioService.addLocalTrack(file);
-        const mainTrack = adaptLocalTrackToMainTrack(localTrack);
-        
-        const okToast = await this.toastCtrl.create({
-          message: `"${mainTrack.title}" uploaded successfully!`,
-          duration: 1500,
-          position: 'bottom',
-          color: 'success'
-        });
-        await okToast.present();
+        try {
+          const track = await this.audioService.addLocalTrack(file);
+          results.success++;
+          successfulTracks.push(track);
+          
+          // Only show success toast for single file uploads
+          if (files.length === 1) {
+            const okToast = await this.toastCtrl.create({
+              message: `"${track.title}" uploaded successfully!`,
+              duration: 1500,
+              position: 'bottom',
+              color: 'success'
+            });
+            await okToast.present();
+          }
+        } catch (error) {
+          results.failed++;
+          console.error('Error processing file:', error);
+          
+          // Show detailed error for single file uploads
+          if (files.length === 1) {
+            const errMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            const errToast = await this.toastCtrl.create({
+              message: `Error uploading ${file.name}: ${errMessage}`,
+              duration: 3000,
+              position: 'bottom',
+              color: 'danger'
+            });
+            await errToast.present();
+          }
+        }
       }
+
+      // Show summary toast for multiple files
+      if (files.length > 1) {
+        const summaryToast = await this.toastCtrl.create({
+          message: `Upload complete: ${results.success} succeeded, ${results.failed} failed`,
+          duration: 3000,
+          position: 'bottom',
+          color: results.failed ? 'warning' : 'success'
+        });
+        await summaryToast.present();
+      }
+
+      // Refresh the local music list to show the new tracks
       await this.refreshLocalMusic();
+
+      // If we have successful uploads and it was a single file, start playing it
+      if (successfulTracks.length === 1 && files.length === 1) {
+        this.playTrack(successfulTracks[0]);
+      }
+
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error('Error in upload process:', error);
       const errToast = await this.toastCtrl.create({
-        message: 'Error uploading some files.',
-        duration: 2000,
+        message: 'Error uploading files',
+        duration: 3000,
         position: 'bottom',
         color: 'danger'
       });
       await errToast.present();
     } finally {
+      await loading.dismiss();
       input.value = '';
-      loading.dismiss();
     }
   }
-  playTrack(track: Track) {
-    // When a track is played, it's integrated with the main player service
-    this.audioService.play(track);
+
+  async playTrack(track: Track) {
+    try {
+      await this.audioService.setQueue([track], 0);
+      await this.router.navigate(['/player']);
+    } catch (error) {
+      console.error('Error playing track:', error);
+      const toast = await this.toastCtrl.create({
+        message: 'Failed to play track',
+        duration: 2000,
+        color: 'danger'
+      });
+      await toast.present();
+    }
   }
 }

@@ -15,10 +15,12 @@ export function adaptLocalTrackToMainTrack(localTrack: LocalTrack): MainTrack {
     previewUrl: localTrack.previewUrl,
     spotifyId: localTrack.spotifyId || '',
     liked: localTrack.liked,
-    isLocal: localTrack.isLocal,
+    isLocal: true,
     localPath: localTrack.localPath,
     source: 'local',
     addedAt: new Date().toISOString(),
-    artwork: localTrack.imageUrl
+    artwork: localTrack.imageUrl,
+    type: localTrack.previewUrl?.split('.').pop() || 'mp3',
+    pathOrUrl: localTrack.previewUrl
   };
 }

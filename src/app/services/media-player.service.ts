@@ -292,10 +292,19 @@ export class MediaPlayerService {
   getCurrentTime(): Observable<number> { return this.currentTime$.asObservable(); }
   getDuration(): Observable<number> { return this.duration$.asObservable(); }
 
-  // Track Management
+  /**
+   * Adds a local track to the library and processes it for playback
+   */
   async addLocalTrack(file: File): Promise<Track> {
     try {
-      const id = `local-${Date.now()}`;
+      // Validate file type
+      const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac', 'audio/opus', 'audio/m4a'];
+      if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|aac|flac|opus|m4a)$/i)) {
+        throw new Error(`Invalid file type: ${file.type}. Supported types: MP3, WAV, OGG, AAC, FLAC, OPUS, M4A`);
+      }
+
+      // Generate unique ID and paths
+      const id = `local-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const fileName = file.name;
       const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'mp3';
       const uniqueFileName = `${id}.${fileExtension}`;
@@ -303,35 +312,64 @@ export class MediaPlayerService {
       let fileUri = '';
 
       if (this.platform.is('hybrid')) {
-        const fileArrayBuffer = await file.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(fileArrayBuffer)));
-
+        // For mobile platforms
         try {
           await Filesystem.mkdir({
             path: 'music',
             directory: Directory.Data,
             recursive: true
           });
-        } catch (dirErr) { /* Directory might already exist */ }
+        } catch (error) {
+          // Ignore if directory exists
+          console.log('Music directory exists or error:', error);
+        }
 
+        const fileArrayBuffer = await file.arrayBuffer();
+        const base64Data = btoa(
+          new Uint8Array(fileArrayBuffer)
+            .reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+
+        // Save the file
         const savedFile = await Filesystem.writeFile({
           path: relativeFilePath,
-          data: base64,
+          data: base64Data,
           directory: Directory.Data
         });
 
-        fileUri = savedFile.uri;
+        fileUri = Capacitor.convertFileSrc(savedFile.uri);
       } else {
+        // For web platform
         fileUri = URL.createObjectURL(file);
+        this._currentBlobUrl = fileUri;
       }
 
+      // Get audio duration
+      let duration = 0;
+      try {
+        duration = await this.getAudioDuration(file);
+      } catch (error) {
+        console.warn('Could not get audio duration:', error);
+      }
+
+      // Extract metadata from filename
       let title = fileName.replace(/\.[^/.]+$/, '');
+      let artist = 'Unknown Artist';
+      
+      // Try to extract artist if filename is in "Artist - Title" format
+      if (title.includes(' - ')) {
+        const parts = title.split(' - ');
+        artist = parts[0].trim();
+        title = parts[1].trim();
+      }
+
+      // Create track object with all required properties
       const track: Track = {
         id,
         title,
-        artist: 'Local Music',
-        album: 'My Music',
-        duration: await this.getAudioDuration(file),
+        artist,
+        album: artist !== 'Unknown Artist' ? artist : 'Local Music',
+        duration,
         imageUrl: 'assets/music-bg.png',
         previewUrl: fileUri,
         spotifyId: '',
@@ -343,7 +381,9 @@ export class MediaPlayerService {
         type: fileExtension
       };
 
+      // Save track in database
       await this.dataService.saveLocalMusic(track, relativeFilePath);
+      
       return track;
     } catch (error) {
       console.error('Error adding local track:', error);
@@ -401,15 +441,24 @@ export class MediaPlayerService {
       ...update
     });
   }
-
   /**
    * Integrates local track metadata extraction and storage
    * Called from the local-home page
    */
   async integrateLocalMediaService(track: Track): Promise<void> {
-    // Make sure the local track is properly registered with the main player service
-    await this.dataService.saveLocalMusic(track, track.localPath || '');
-    // Play the track through the main service
-    await this.play(track);
+    try {
+      // Make sure the track has all the necessary properties for the main service
+      if (!track.source) track.source = 'local';
+      if (!track.addedAt) track.addedAt = new Date().toISOString();
+      
+      // Make sure the local track is properly registered with the main player service
+      await this.dataService.saveLocalMusic(track, track.localPath || '');
+      
+      // Play the track through the main service
+      await this.play(track);
+    } catch (error) {
+      console.error('Error integrating local track:', error);
+      throw error;
+    }
   }
 }

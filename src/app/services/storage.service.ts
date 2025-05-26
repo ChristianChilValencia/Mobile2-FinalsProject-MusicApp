@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Platform } from '@ionic/angular';
+import { Capacitor } from '@capacitor/core';
 
 @Injectable({
   providedIn: 'root'
@@ -14,14 +15,24 @@ export class StorageService {
       ? Directory.Data 
       : Directory.Documents;
   }
-
-  async writeFile(fileName: string, data: Blob): Promise<string> {
+  async writeFile(fileName: string, data: File | Blob): Promise<string> {
     try {
       // Create the music directory if it doesn't exist
       await this.createMusicDirectory();
 
-      // Convert Blob to base64
-      const base64Data = await this.blobToBase64(data);
+      let base64Data: string;
+      
+      if (data instanceof File) {
+        // Convert File to ArrayBuffer then to base64
+        const arrayBuffer = await data.arrayBuffer();
+        base64Data = btoa(
+          new Uint8Array(arrayBuffer)
+            .reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+      } else {
+        // Convert Blob to base64
+        base64Data = await this.blobToBase64(data);
+      }
 
       // Save the file
       const result = await Filesystem.writeFile({
@@ -31,7 +42,13 @@ export class StorageService {
         recursive: true
       });
 
-      return result.uri;
+      // Return platform-appropriate URI
+      if (this.platform.is('hybrid')) {
+        return Capacitor.convertFileSrc(result.uri);
+      } else {
+        const blob = await this.readFile(`music/${fileName}`);
+        return URL.createObjectURL(blob);
+      }
     } catch (error) {
       console.error('Error writing file:', error);
       throw error;

@@ -307,6 +307,18 @@ export class MediaPlayerService {
 
   async addLocalTrack(file: File): Promise<Track> {
     try {
+      // Validate file
+      const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac', 'audio/opus', 'audio/m4a'];
+      if (!validTypes.includes(file.type)) {
+        throw new Error(`Invalid file type: ${file.type}. Supported types: MP3, WAV, OGG, AAC, FLAC, OPUS, M4A`);
+      }
+
+      // Check file size (max 50MB)
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File size exceeds 50MB limit: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      }
+
       const id = `local-${Date.now()}`;
       const fileName = file.name;
       const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'mp3';
@@ -315,34 +327,62 @@ export class MediaPlayerService {
       let fileUri = '';
 
       if (this.platform.is('hybrid')) {
+        // Convert file to base64
         const fileArrayBuffer = await file.arrayBuffer();
         const base64 = this.arrayBufferToBase64(fileArrayBuffer);
 
         try {
+          // Ensure music directory exists
           await Filesystem.mkdir({
             path: 'music',
             directory: Directory.Data,
             recursive: true
           });
-        } catch (dirErr) {}
+        } catch (error) {
+          // Ignore if directory already exists
+          const err = error as { message?: string };
+          if (err.message && !err.message.includes('exists')) {
+            throw error;
+          }
+        }
 
-        const savedFile = await Filesystem.writeFile({
-          path: relativeFilePath,
-          data: base64,
-          directory: Directory.Data
-        });
-
-        fileUri = savedFile.uri;
+        // Save file
+        try {
+          const savedFile = await Filesystem.writeFile({
+            path: relativeFilePath,
+            data: base64,
+            directory: Directory.Data
+          });
+          fileUri = savedFile.uri;
+        } catch (error) {
+          const err = error as { message?: string };
+          throw new Error(`Failed to write file: ${err.message || 'Unknown error'}`);
+        }
       } else {
+        // Web platform - use blob URLs
         fileUri = URL.createObjectURL(file);
       }
 
-      let title = fileName.replace(/\.[^/.]+$/, '');      const track: Track = {
+      // Extract metadata and title from filename
+      let title = fileName.replace(/\.[^/.]+$/, '');
+      // Remove common prefixes/numbers
+      title = title.replace(/^\d+[\s.-]+/, '').trim();
+      // Try to extract artist if format is "Artist - Title"
+      let artist = 'Unknown Artist';
+      if (title.includes(' - ')) {
+        const parts = title.split(' - ');
+        artist = parts[0].trim();
+        title = parts[1].trim();
+      }
+
+      // Create track object
+      const duration = await this.getAudioDuration(file);
+      const track: Track = {
         id,
         title,
-        artist: 'Local Music',
-        album: 'My Music',
-        duration: await this.getAudioDuration(file),
+        artist,
+        album: artist !== 'Unknown Artist' ? artist : 'Local Music',
+        duration,
         imageUrl: 'assets/music-bg.png',
         previewUrl: fileUri,
         spotifyId: '',
@@ -351,8 +391,10 @@ export class MediaPlayerService {
         localPath: relativeFilePath
       };
 
+      // Save track metadata
       await this.dataService.saveLocalMusic(track, relativeFilePath);
       return track;
+
     } catch (error) {
       console.error('Error adding local track:', error);
       throw error;

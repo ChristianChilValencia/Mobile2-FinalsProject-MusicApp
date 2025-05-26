@@ -40,10 +40,10 @@ export class MiniPlayerComponent implements OnInit, OnDestroy {
 
   togglePlay() {
     this.mediaPlayerService.togglePlay();
-  }
-  openPlayerPage() {
+  }  openPlayerPage() {
     const currentTrack = this.playbackState?.currentTrack;
-    if (currentTrack?.source === 'local') {
+    // Navigate to the appropriate player page based on the track source
+    if (currentTrack?.source === 'local' || currentTrack?.isLocal) {
       this.navCtrl.navigateForward('/tabs/player');
     } else {
       this.navCtrl.navigateForward('/tabs/player');

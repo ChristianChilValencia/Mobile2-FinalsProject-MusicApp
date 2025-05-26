@@ -1,14 +1,9 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>Music Player</ion-title>
-    <ion-buttons slot="start">
-      <ion-button routerLink="/local-player">
-        <ion-icon name="play-circle-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
+      <ion-title>Music Player</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="requestAudioPermissions(); openFileSelector()">
-        <ion-icon name="add"></ion-icon>
+        <ion-icon name="cloud-upload"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -21,9 +16,9 @@
          multiple (change)="onFileSelected($event)">
 
   <!-- Local Music Section -->
-  <div class="section-header">
-    <h2>Your Music</h2>
-  </div>
+  <ion-card-header>
+    Your Music
+  </ion-card-header>
 
   <div *ngIf="localMusic.length === 0" class="empty-state">
     <ion-icon name="musical-notes"></ion-icon>

@@ -35,10 +35,6 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'local-player',
-    loadChildren: () => import('./pages/local-player/local-player.module').then( m => m.PlayerPageModule)
-  },
-  {
     path: 'local-library',
     redirectTo: '/tabs/local-library',
     pathMatch: 'full'

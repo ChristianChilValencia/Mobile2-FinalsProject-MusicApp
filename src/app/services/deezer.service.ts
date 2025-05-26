@@ -37,11 +37,17 @@ export class DeezerService {
       title: deezerTrack.title || 'Unknown Title',
       artist: deezerTrack.artist?.name || 'Unknown Artist',
       album: deezerTrack.album?.title || 'Unknown Album',
-      artwork: deezerTrack.album?.cover_medium || null,
       duration: deezerTrack.duration || 0,
-      pathOrUrl: deezerTrack.preview || '',
+      imageUrl: deezerTrack.album?.cover_medium || 'assets/placeholder-album.png',
+      previewUrl: deezerTrack.preview || '',
+      spotifyId: '',
+      liked: false,
+      isLocal: false,
       source: 'stream',
-      addedAt: new Date().toISOString()
+      addedAt: new Date().toISOString(),
+      pathOrUrl: deezerTrack.preview || '',
+      artwork: deezerTrack.album?.cover_medium || null,
+      type: 'mp3'
     };
   }
 }

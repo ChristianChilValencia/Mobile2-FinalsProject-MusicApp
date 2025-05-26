@@ -120,7 +120,8 @@ export class SearchPage implements OnInit {
   async addTrackToPlaylist(track: Track, playlistId: string) {
     try {
       // First, make sure the track is saved in our data service
-      await this.dataService.saveLocalMusic(track, track.pathOrUrl);
+      const filePath = track.pathOrUrl || track.previewUrl;
+      await this.dataService.saveLocalMusic(track, filePath);
       
       // Then add it to the playlist
       await this.dataService.addTrackToPlaylist(playlistId, track.id);
@@ -155,7 +156,8 @@ export class SearchPage implements OnInit {
       const playlist = await this.dataService.createPlaylist(newPlaylistName);
       
       // Save the track and add it to the playlist
-      await this.dataService.saveLocalMusic(track, track.pathOrUrl);
+      const filePath = track.pathOrUrl || track.previewUrl;
+      await this.dataService.saveLocalMusic(track, filePath);
       await this.dataService.addTrackToPlaylist(playlist.id, track.id);
       
       const toast = await this.toastController.create({

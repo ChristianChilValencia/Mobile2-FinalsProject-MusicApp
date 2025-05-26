@@ -9,13 +9,19 @@ export interface Track {
   id: string;
   title: string;
   artist: string;
-  album?: string;
-  artwork?: string | null;
-  duration?: number;
-  pathOrUrl: string;
+  album: string;
+  duration: number;
+  imageUrl: string;
+  previewUrl: string;
+  spotifyId: string;
+  liked: boolean;
+  isLocal: boolean;
+  localPath?: string;
   source: 'local' | 'stream';
   addedAt: string;
   type?: string;
+  artwork?: string | null;
+  pathOrUrl?: string;
 }
 
 export interface Playlist {
@@ -104,9 +110,9 @@ export class DataService {
       const tracks = this.tracksSubject.value;
       const track = tracks.find(t => t.id === id);
       
-      if (track && track.source === 'local') {
+      if (track && track.source === 'local' && track.localPath) {
         // Delete the actual file
-        await this.storageService.deleteFile(track.pathOrUrl);
+        await this.storageService.deleteFile(track.localPath);
       }
       
       // Update tracks array

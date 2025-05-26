@@ -138,11 +138,18 @@ export class UploadsPage implements OnInit {
         title: metadata.title || file.name.replace(`.${fileExt}`, ''),
         artist: metadata.artist || 'Unknown Artist',
         album: metadata.album || 'Unknown Album',
-        artwork: metadata.artwork || '',
+        duration: metadata.duration || 0,
+        imageUrl: metadata.artwork || 'assets/placeholder-album.png',
+        previewUrl: filePath,
+        spotifyId: '',
+        liked: false,
+        isLocal: true,
         source: 'local',
         pathOrUrl: filePath,
-        duration: metadata.duration || 0,
-        addedAt: new Date().toISOString()
+        addedAt: new Date().toISOString(),
+        artwork: metadata.artwork || null,
+        type: fileExt,
+        localPath: filePath
       };
       
       // Save track in data service

@@ -2,10 +2,10 @@
   <ion-toolbar>
     <ion-title>Music Player</ion-title>
     <ion-buttons slot="start">
-      <ion-button routerLink="/player">
+      <ion-button routerLink="/local-player">
         <ion-icon name="play-circle-outline"></ion-icon>
       </ion-button>
-            <ion-button routerLink="/music-player">
+            <ion-button routerLink="/local-music-player">
         <ion-icon name="musical-notes-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -13,7 +13,7 @@
       <ion-button (click)="requestAudioPermissions(); openFileSelector()">
         <ion-icon name="add"></ion-icon>
       </ion-button>
-      <ion-button routerLink="/library">
+      <ion-button routerLink="/local-library">
         <ion-icon name="library-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -73,7 +73,7 @@
      [style.opacity]="1 - (slideOffset / 100)"
      [class.closing]="isClosing">
   
-  <div class="track-info" [routerLink]="['/player']">
+  <div class="track-info" [routerLink]="['/local-player']">
     <ion-thumbnail>
       <img [src]="currentTrack.imageUrl || 'assets/music-bg.png'" [alt]="currentTrack.title">
     </ion-thumbnail>

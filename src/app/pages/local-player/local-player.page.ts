@@ -8,8 +8,8 @@ import { AlertController, ToastController } from '@ionic/angular';
 
 @Component({
   selector: 'app-player',
-  templateUrl: './player.page.html',
-  styleUrls: ['./player.page.scss'],
+  templateUrl: './local-player.page.html',
+  styleUrls: ['./local-player.page.scss'],
   standalone: false
 })
 export class PlayerPage implements OnInit, OnDestroy {

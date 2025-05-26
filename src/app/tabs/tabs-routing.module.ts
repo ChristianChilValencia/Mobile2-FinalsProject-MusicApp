@@ -26,10 +26,17 @@ const routes: Routes = [
       {
         path: 'playlist/:id',
         loadChildren: () => import('../pages/playlist-stream/playlist-stream.module').then(m => m.PlaylistStreamPageModule)
-      },
-      {
+      },      {
         path: 'player',
         loadChildren: () => import('../pages/player/player.module').then(m => m.PlayerPageModule)
+      },
+      {
+        path: 'local-home',
+        loadChildren: () => import('../pages/local-home/local-home.module').then(m => m.HomePageModule)
+      },
+      {
+        path: 'local-library',
+        loadChildren: () => import('../pages/local-library/local-library.module').then(m => m.LibraryPageModule)
       },
       {
         path: '',

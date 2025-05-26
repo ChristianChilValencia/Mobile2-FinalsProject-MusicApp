@@ -16,8 +16,8 @@ interface Playlist {
 
 @Component({
   selector: 'app-library',
-  templateUrl: './library.page.html',
-  styleUrls: ['./library.page.scss'],
+  templateUrl: './local-library.page.html',
+  styleUrls: ['./local-library.page.scss'],
   standalone: false
 })
 export class LibraryPage implements OnInit, OnDestroy {

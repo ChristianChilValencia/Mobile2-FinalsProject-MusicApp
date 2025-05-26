@@ -25,11 +25,24 @@ const routes: Routes = [
   {
     path: 'playlist-stream',
     loadChildren: () => import('./pages/playlist-stream/playlist-stream.module').then( m => m.PlaylistStreamPageModule)
-  },
-  {
+  },  {
     path: 'player',
     loadChildren: () => import('./pages/player/player.module').then( m => m.PlayerPageModule)
-  }
+  },  
+  {
+    path: 'local-home',
+    redirectTo: '/tabs/local-home',
+    pathMatch: 'full'
+  },
+  {
+    path: 'local-player',
+    loadChildren: () => import('./pages/local-player/local-player.module').then( m => m.PlayerPageModule)
+  },
+  {
+    path: 'local-library',
+    redirectTo: '/tabs/local-library',
+    pathMatch: 'full'
+  },
 ];
 @NgModule({
   imports: [

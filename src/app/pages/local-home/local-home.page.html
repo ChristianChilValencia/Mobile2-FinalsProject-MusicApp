@@ -63,48 +63,4 @@
   </div>
 </ion-content>
 
-<!-- Mini Player -->
-<div class="mini-player"
-     *ngIf="!hideMiniPlayer && (audioService.getCurrentTrack() | async) as currentTrack"
-     (touchstart)="onTouchStart($event)"
-     (touchmove)="onTouchMove($event)"
-     (touchend)="onTouchEnd($event)"
-     [style.transform]="'translateY(' + slideOffset + 'px)'"
-     [style.opacity]="1 - (slideOffset / 100)"
-     [class.closing]="isClosing">
-  
-  <div class="track-info" [routerLink]="['/local-player']">
-    <ion-thumbnail>
-      <img [src]="currentTrack.imageUrl || 'assets/music-bg.png'" [alt]="currentTrack.title">
-    </ion-thumbnail>
-    <div class="text-info">
-      <p class="title">{{currentTrack.title}}</p>
-      <p class="artist">{{currentTrack.artist}}</p>
-    </div>
-  </div>
-  
-  <div class="progress-container">
-    <span class="time-label">{{formatTime(audioService.getCurrentTime() | async)}}</span>
-    <ion-range
-      [value]="audioService.getCurrentTime() | async"
-      [min]="0"
-      [max]="(audioService.getDuration() | async) || 100"
-      (ionChange)="onRangeChange($event)"
-      dualKnobs="false"
-      class="progress-bar">
-    </ion-range>
-    <span class="time-label">{{formatTime(audioService.getDuration() | async)}}</span>
-  </div>
-  
-  <div class="controls">
-    <ion-button fill="clear" (click)="audioService.previous()">
-      <ion-icon name="play-skip-back"></ion-icon>
-    </ion-button>
-    <ion-button fill="clear" class="play-button" (click)="togglePlay()">
-      <ion-icon [name]="(audioService.getIsPlaying() | async) ? 'pause' : 'play'"></ion-icon>
-    </ion-button>
-    <ion-button fill="clear" (click)="audioService.next()">
-      <ion-icon name="play-skip-forward"></ion-icon>
-    </ion-button>
-  </div>
-</div>
+<!-- Removed mini-player from local-home since we're using the global mini-player component in tabs.page.html -->

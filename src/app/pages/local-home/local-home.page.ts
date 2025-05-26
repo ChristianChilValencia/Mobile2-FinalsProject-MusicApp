@@ -11,12 +11,14 @@ import {
   LoadingController,
   Platform
 } from '@ionic/angular';
-import { MediaPlayerService, Track } from '../../local-services/media-player.service';
+import { MediaPlayerService } from '../../services/media-player.service';
+import { Track } from '../../services/data.service';
 import { DataService } from '../../local-services/data.service';
 import { ConfigService } from '../../local-services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { adaptLocalTrackToMainTrack } from '../../utils/track-adapter';
 
 @Component({
   selector: 'app-home',
@@ -31,13 +33,6 @@ export class HomePage implements OnInit, OnDestroy {
   localMusic: Track[] = [];
   isDarkMode = false;
   private settingsSub?: Subscription;
-
-  // Mini-player status and touch gesture variables
-  hideMiniPlayer = false;
-  isClosing = false;
-  slideOffset = 0;
-  touchStartY = 0;
-  dismissThreshold = 80;
 
   constructor(
     public audioService: MediaPlayerService,
@@ -57,33 +52,13 @@ export class HomePage implements OnInit, OnDestroy {
     });
     await this.dataService.ensureInit();
     await this.refreshLocalMusic();
-    this.hideMiniPlayer = false;
-    this.slideOffset = 0;
   }
 
   ngOnDestroy() {
     this.settingsSub?.unsubscribe();
   }
 
-  // Add methods for interacting with the player 
-  togglePlay() {
-    this.audioService.togglePlay();
-  }
-
-  seekTrack(position: number) {
-    this.audioService.seek(position);
-  }
-
-  onRangeChange(event: any) {
-    const value = event.detail.value;
-    if (typeof value === 'number') {
-      this.seekTrack(value);
-    } else if (value && typeof value.lower === 'number') {
-      this.seekTrack(value.lower);
-    }
-  }
-
-  // Format time for mini-player
+  // Format time for display
   formatTime(time: number | null): string {
     if (time === null) return '0:00';
     const minutes = Math.floor(time / 60);
@@ -91,52 +66,11 @@ export class HomePage implements OnInit, OnDestroy {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }
 
-  // Touch gesture methods for mini-player
-  onTouchStart(event: TouchEvent) {
-    this.touchStartY = event.touches[0].clientY;
-    event.stopPropagation();
-  }
-
-  onTouchMove(event: TouchEvent) {
-    const touchY = event.touches[0].clientY;
-    const deltaY = touchY - this.touchStartY;
-    if (deltaY >= 0) {
-      this.slideOffset = deltaY;
-    } else {
-      this.slideOffset = 0;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  async onTouchEnd(event: TouchEvent) {
-    if (this.slideOffset > this.dismissThreshold) {
-      this.isClosing = true;
-      try {
-        await this.audioService.pause();
-        const toast = await this.toastCtrl.create({
-          message: 'Playback stopped',
-          duration: 1500,
-          position: 'bottom',
-          color: 'medium'
-        });
-        await toast.present();
-        setTimeout(() => {
-          this.hideMiniPlayer = true;
-          this.isClosing = false;
-        }, 300);
-      } catch (error) {
-        console.error('Error stopping playback:', error);
-      }
-    } else {
-      this.slideOffset = 0;
-    }
-    event.stopPropagation();
-  }
-
   private async refreshLocalMusic() {
     try {
-      this.localMusic = await this.dataService.getLocalTracks();
+      const localTracks = await this.dataService.getLocalTracks();
+      // Convert local tracks to main app track format
+      this.localMusic = localTracks.map(track => adaptLocalTrackToMainTrack(track));
       return this.localMusic;
     } catch (error) {
       console.error('Error refreshing local music:', error);
@@ -171,9 +105,12 @@ export class HomePage implements OnInit, OnDestroy {
 
     try {
       for (const file of files) {
-        const track = await this.audioService.addLocalTrack(file);
+        // We need to adapt the local track to the main app format before adding it
+        const localTrack = await this.audioService.addLocalTrack(file);
+        const mainTrack = adaptLocalTrackToMainTrack(localTrack);
+        
         const okToast = await this.toastCtrl.create({
-          message: `"${track.title}" uploaded successfully!`,
+          message: `"${mainTrack.title}" uploaded successfully!`,
           duration: 1500,
           position: 'bottom',
           color: 'success'
@@ -195,10 +132,8 @@ export class HomePage implements OnInit, OnDestroy {
       loading.dismiss();
     }
   }
-
   playTrack(track: Track) {
-    this.hideMiniPlayer = false;
-    this.slideOffset = 0;
+    // When a track is played, it's integrated with the main player service
     this.audioService.play(track);
   }
 }

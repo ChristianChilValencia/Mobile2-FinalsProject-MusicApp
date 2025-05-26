@@ -401,4 +401,15 @@ export class MediaPlayerService {
       ...update
     });
   }
+
+  /**
+   * Integrates local track metadata extraction and storage
+   * Called from the local-home page
+   */
+  async integrateLocalMediaService(track: Track): Promise<void> {
+    // Make sure the local track is properly registered with the main player service
+    await this.dataService.saveLocalMusic(track, track.localPath || '');
+    // Play the track through the main service
+    await this.play(track);
+  }
 }

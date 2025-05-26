@@ -1,14 +1,19 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { ToastController } from '@ionic/angular';
-import { v4 as uuidv4 } from 'uuid';
-import { DataService, Track } from '../../services/data.service';
-import { StorageService } from '../../services/storage.service';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef} from '@angular/core';
+import { Router } from '@angular/router';
+import { ToastController, LoadingController, Platform} from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { Track } from '../../services/data.service';
+import { DataService as LocalDataService } from '../../local-services/data.service';
+import { ConfigService } from '../../local-services/config.service';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { adaptLocalTrackToMainTrack } from '../../utils/track-adapter';
 
-interface PendingUpload {
+interface UploadStatus {
   file: File;
-  progress: number;
   status: string;
+  progress: number;
 }
 
 @Component({
@@ -17,233 +22,162 @@ interface PendingUpload {
   styleUrls: ['./uploads.page.scss'],
   standalone: false
 })
-export class UploadsPage implements OnInit {
-  @ViewChild('fileInput') fileInput!: ElementRef;
-  
-  isDragging = false;
-  pendingUploads: PendingUpload[] = [];
+export class UploadsPage implements OnInit, OnDestroy {
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+
   recentlyAddedTracks: Track[] = [];
-  
-  // Supported audio formats
-  private readonly supportedFormats = [
-    'audio/mpeg', // .mp3
-    'audio/mp4', // .m4a, .aac
-    'audio/wav', // .wav
-    'audio/ogg', // .ogg, .opus
-    'audio/flac', // .flac
-    'audio/aac' // .aac
-  ];
+  pendingUploads: UploadStatus[] = [];
+  private settingsSub?: Subscription;
 
   constructor(
-    private storageService: StorageService,
-    private dataService: DataService,
-    private mediaPlayerService: MediaPlayerService,
-    private toastController: ToastController
+    private audioService: MediaPlayerService,
+    private dataService: LocalDataService,
+    private configService: ConfigService,
+    private router: Router,
+    private toastCtrl: ToastController,
+    private loadingCtrl: LoadingController,
+    private platform: Platform
   ) {}
 
-  ngOnInit() {
-    this.loadRecentlyAddedTracks();
+  async ngOnInit() {
+    await this.dataService.ensureInit();
+    await this.loadRecentlyAddedTracks();
   }
 
-  async loadRecentlyAddedTracks() {
-    const allTracks = await this.dataService.getLocalTracks();
-    // Sort by added date (newest first) and take the first 10
-    this.recentlyAddedTracks = allTracks
-      .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
-      .slice(0, 10);
+  ngOnDestroy() {
+    this.settingsSub?.unsubscribe();
   }
 
-  triggerFileInput() {
+  async requestAudioPermissions() {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Filesystem.requestPermissions();
+        return true;
+      } catch (e) {
+        console.error('Error requesting permissions:', e);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  openFileSelector() {
     this.fileInput.nativeElement.click();
   }
 
-  onDragOver(event: DragEvent) {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragging = true;
-  }
+  async onFileSelected(evt: Event) {
+    const input = evt.target as HTMLInputElement;
+    if (!input.files?.length) return;
 
-  onDragLeave(event: DragEvent) {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragging = false;
-  }
+    const files = Array.from(input.files);
+    const loading = await this.loadingCtrl.create({ 
+      message: files.length > 1 ? `Uploading ${files.length} files...` : 'Uploading file...',
+    });
+    await loading.present();
 
-  onDrop(event: DragEvent) {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragging = false;
-    
-    if (event.dataTransfer?.files) {
-      this.processFiles(event.dataTransfer.files);
-    }
-  }
+    const results: { success: number; failed: number } = { success: 0, failed: 0 };
 
-  onFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files) {
-      this.processFiles(input.files);
-    }
-  }
-
-  processFiles(files: FileList) {
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // Check if the file is an audio file
-      if (!this.isAudioFile(file)) {
-        this.showToast(`Skipping unsupported file: ${file.name}`, 'warning');
-        continue;
-      }
-      
-      // Add to pending uploads
-      this.pendingUploads.push({
-        file,
-        progress: 0,
-        status: 'Preparing...'
-      });
-      
-      // Process the file
-      this.processAudioFile(file, this.pendingUploads.length - 1);
-    }
-  }
-
-  async processAudioFile(file: File, uploadIndex: number) {
     try {
-      // Update status
-      this.updateUploadStatus(uploadIndex, 'Reading file...', 0.1);
-      
-      // Create a unique ID for the track
-      const trackId = uuidv4();
-      
-      // Generate a safe filename
-      const fileExt = file.name.split('.').pop() || 'mp3';
-      const fileName = `${trackId}.${fileExt}`;
-      
-      // Extract metadata (if available)
-      const metadata = await this.extractMetadata(file);
-      
-      // Update status
-      this.updateUploadStatus(uploadIndex, 'Storing file...', 0.4);
-      
-      // Store the file
-      const filePath = await this.storageService.writeFile(fileName, file);
-      
-      // Update status
-      this.updateUploadStatus(uploadIndex, 'Creating track...', 0.8);
-      
-      // Create track object
-      const track: Track = {
-        id: trackId,
-        title: metadata.title || file.name.replace(`.${fileExt}`, ''),
-        artist: metadata.artist || 'Unknown Artist',
-        album: metadata.album || 'Unknown Album',
-        duration: metadata.duration || 0,
-        imageUrl: metadata.artwork || 'assets/placeholder-album.png',
-        previewUrl: filePath,
-        spotifyId: '',
-        liked: false,
-        isLocal: true,
-        source: 'local',
-        pathOrUrl: filePath,
-        addedAt: new Date().toISOString(),
-        artwork: metadata.artwork || null,
-        type: fileExt,
-        localPath: filePath
-      };
-      
-      // Save track in data service
-      await this.dataService.saveLocalMusic(track, filePath);
-      
-      // Update status
-      this.updateUploadStatus(uploadIndex, 'Completed', 1);
-      
-      // Remove from pending after a delay
-      setTimeout(() => {
-        this.pendingUploads.splice(uploadIndex, 1);
-      }, 2000);
-      
-      // Refresh recently added
-      await this.loadRecentlyAddedTracks();
-      
-      // Show success message
-      this.showToast(`Added: ${track.title}`, 'success');
-    } catch (error) {
-      console.error('Error processing audio file:', error);
-      this.updateUploadStatus(uploadIndex, 'Failed', 0);
-      this.showToast(`Failed to process ${file.name}`, 'danger');
-    }
-  }
-
-  updateUploadStatus(index: number, status: string, progress: number) {
-    if (index >= 0 && index < this.pendingUploads.length) {
-      this.pendingUploads[index].status = status;
-      this.pendingUploads[index].progress = progress;
-    }
-  }
-
-  async extractMetadata(file: File): Promise<{
-    title?: string;
-    artist?: string;
-    album?: string;
-    artwork?: string;
-    duration?: number;
-  }> {
-    return new Promise((resolve) => {
-      // Create an audio element to read metadata
-      const audio = new Audio();
-      const url = URL.createObjectURL(file);
-      
-      // Set up event listeners
-      audio.addEventListener('loadedmetadata', () => {
-        // Get duration
-        const duration = audio.duration;
+      for (const file of files) {
+        const uploadStatus: UploadStatus = {
+          file,
+          status: 'Starting...',
+          progress: 0
+        };
+        this.pendingUploads.push(uploadStatus);
         
-        // For now, we'll return basic metadata
-        // In a real app, you'd use a library like jsmediatags to extract ID3 tags
-        resolve({
-          duration
+        try {
+          // Use the MediaPlayerService to upload the file and get a track
+          const track = await this.audioService.addLocalTrack(file);
+          results.success++;
+          
+          // Add to recently added tracks
+          this.recentlyAddedTracks = [track, ...this.recentlyAddedTracks].slice(0, 10);
+          
+          // Only show success toast for single file uploads
+          if (files.length === 1) {
+            const okToast = await this.toastCtrl.create({
+              message: `"${track.title}" uploaded successfully!`,
+              duration: 1500,
+              position: 'bottom',
+              color: 'success'
+            });
+            await okToast.present();
+          }
+        } catch (error) {
+          results.failed++;
+          console.error('Error processing file:', error);
+          
+          // Show detailed error for single file uploads
+          if (files.length === 1) {
+            const errMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            const errToast = await this.toastCtrl.create({
+              message: `Error uploading ${file.name}: ${errMessage}`,
+              duration: 3000,
+              position: 'bottom',
+              color: 'danger'
+            });
+            await errToast.present();
+          }
+        } finally {
+          // Remove from pending uploads
+          this.pendingUploads = this.pendingUploads.filter(u => u.file !== file);
+        }
+      }
+
+      // Show summary toast for multiple files
+      if (files.length > 1) {
+        const summaryToast = await this.toastCtrl.create({
+          message: `Upload complete: ${results.success} succeeded, ${results.failed} failed`,
+          duration: 3000,
+          position: 'bottom',
+          color: results.failed ? 'warning' : 'success'
         });
-        
-        // Clean up
-        URL.revokeObjectURL(url);
-      });
-      
-      audio.addEventListener('error', () => {
-        console.error('Error loading audio for metadata extraction');
-        resolve({});
-        URL.revokeObjectURL(url);
-      });
-      
-      // Load the audio
-      audio.src = url;
-      audio.load();
-    });
-  }
+        await summaryToast.present();
+      }
 
-  isAudioFile(file: File): boolean {
-    // Check by MIME type if available
-    if (this.supportedFormats.includes(file.type)) {
-      return true;
+      await this.loadRecentlyAddedTracks();
+
+    } catch (error) {
+      console.error('Error in upload process:', error);
+      const errToast = await this.toastCtrl.create({
+        message: 'Error uploading files',
+        duration: 3000,
+        position: 'bottom',
+        color: 'danger'
+      });
+      await errToast.present();
+    } finally {
+      await loading.dismiss();
+      input.value = '';
     }
-    
-    // Fallback to extension check
-    const extension = file.name.split('.').pop()?.toLowerCase() || '';
-    return ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'opus', 'flac'].includes(extension);
   }
 
-  playTrack(track: Track) {
-    this.mediaPlayerService.setQueue([track], 0);
+  async playTrack(track: Track) {
+    try {
+      await this.audioService.setQueue([track], 0);
+      await this.router.navigate(['/player']);
+    } catch (error) {
+      console.error('Error playing track:', error);
+      const toast = await this.toastCtrl.create({
+        message: 'Failed to play track',
+        duration: 2000,
+        color: 'danger'
+      });
+      await toast.present();
+    }
   }
 
-  async showToast(message: string, color: string = 'success') {
-    const toast = await this.toastController.create({
-      message,
-      duration: 2000,
-      position: 'bottom',
-      color
-    });
-    
-    await toast.present();
+  private async loadRecentlyAddedTracks() {
+    try {
+      const localTracks = await this.dataService.getLocalTracks();
+      // Convert local tracks to main track format
+      const tracks = localTracks.map(track => adaptLocalTrackToMainTrack(track));
+      this.recentlyAddedTracks = tracks
+        .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
+        .slice(0, 10);
+    } catch (error) {
+      console.error('Error loading recently added tracks:', error);
+    }
   }
 }

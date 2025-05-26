@@ -5,16 +5,10 @@
       <ion-button routerLink="/local-player">
         <ion-icon name="play-circle-outline"></ion-icon>
       </ion-button>
-            <ion-button routerLink="/local-music-player">
-        <ion-icon name="musical-notes-outline"></ion-icon>
-      </ion-button>
     </ion-buttons>
     <ion-buttons slot="end">
       <ion-button (click)="requestAudioPermissions(); openFileSelector()">
         <ion-icon name="add"></ion-icon>
-      </ion-button>
-      <ion-button routerLink="/local-library">
-        <ion-icon name="library-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -33,12 +27,12 @@
 
   <div *ngIf="localMusic.length === 0" class="empty-state">
     <ion-icon name="musical-notes"></ion-icon>
-    <h3>No local music found</h3>
-    <p>Upload music files to get started</p>
-    <div class="action-buttons">
-      <ion-button (click)="requestAudioPermissions(); openFileSelector()">
-        <ion-icon name="add"></ion-icon>
-        Add Files
+      <h3>No local music found</h3>
+      <p>Upload music files to get started</p>
+    <div>
+    <ion-button fill="clear" (click)="requestAudioPermissions(); openFileSelector()">
+      <ion-icon name="add"></ion-icon>
+      Add Files
       </ion-button>
     </div>
   </div>

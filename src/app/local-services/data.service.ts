@@ -81,81 +81,6 @@ export class DataService {
 
   // ---------- Playlist CRUD ----------
 
-  /** Returns new row ID or -1 */
-  async createPlaylist(name: string): Promise<number> {
-    await this.ensureInit();
-    const now = new Date().toISOString();
-    const res = await this.db.run(
-      `INSERT INTO playlists (name, created_at, updated_at)
-       VALUES (?, ?, ?);`,
-      [name, now, now]
-    );
-    return res.changes?.lastId ?? -1;
-  }
-
-  async getPlaylists(): Promise<{id:number;name:string;created_at:string;updated_at:string}[]> {
-    await this.ensureInit();
-    const res = await this.db.query(`
-      SELECT id, name, created_at, updated_at
-        FROM playlists
-       ORDER BY created_at DESC;
-    `);
-    return res.values || [];
-  }
-
-  // ---------- Playlist ↔ Track ----------
-
-  async addTrackToPlaylist(
-    playlistId: number,
-    trackId: string,
-    position?: number
-  ): Promise<boolean> {
-    await this.ensureInit();
-    if (position === undefined) {
-      const r = await this.db.query(
-        `SELECT MAX(position) AS max_pos FROM playlist_tracks WHERE playlist_id = ?;`,
-        [playlistId]
-      );
-      position = (r.values?.[0]?.max_pos ?? -1) + 1;
-    }
-    await this.db.run(
-      `INSERT OR REPLACE INTO playlist_tracks
-         (playlist_id, track_id, position)
-       VALUES (?, ?, ?);`,
-      [playlistId, trackId, position]
-    );
-    return true;
-  }
-
-  async getPlaylistTracks(playlistId: number): Promise<Track[]> {
-    await this.ensureInit();
-    const res = await this.db.query(`
-      SELECT t.id, t.title, t.artist, t.album,
-             t.duration, t.image_url AS imageUrl,
-             t.preview_url AS previewUrl,
-             t.spotify_id AS spotifyId,
-             t.liked, t.is_local AS isLocal
-        FROM tracks t
-        JOIN playlist_tracks pt
-          ON pt.track_id = t.id
-       WHERE pt.playlist_id = ?
-       ORDER BY pt.position;
-    `, [playlistId]);
-
-    return (res.values || []).map((r: any) => ({
-      id: r.id,
-      title: r.title,
-      artist: r.artist,
-      album: r.album,
-      duration: r.duration,
-      imageUrl: r.imageUrl,
-      previewUrl: r.previewUrl,
-      spotifyId: r.spotifyId,
-      liked: !!r.liked,
-      isLocal: !!r.isLocal
-    }));
-  }
-
   async getLocalTracks(): Promise<Track[]> {
     await this.ensureInit();
 
@@ -221,32 +146,6 @@ export class DataService {
     return true;
   }
 
-  async getLikedTracks(): Promise<Track[]> {
-    await this.ensureInit();
-    const res = await this.db.query(`
-      SELECT t.id, t.title, t.artist, t.album,
-             t.duration, t.image_url AS imageUrl,
-             t.preview_url AS previewUrl,
-             t.spotify_id AS spotifyId,
-             1 AS liked, t.is_local AS isLocal
-        FROM tracks t
-        JOIN liked_music lm ON lm.track_id = t.id
-       ORDER BY lm.liked_at DESC;
-    `);
-    return (res.values || []).map((r: any) => ({
-      id: r.id,
-      title: r.title,
-      artist: r.artist,
-      album: r.album,
-      duration: r.duration,
-      imageUrl: r.imageUrl,
-      previewUrl: r.previewUrl,
-      spotifyId: r.spotifyId,
-      liked: true,
-      isLocal: !!r.isLocal
-    }));
-  }
-
   async uploadedMusic(trackId: string, uri: string, filePath: string = ''): Promise<boolean> {
     await this.ensureInit();
     const now = new Date().toISOString();
@@ -306,22 +205,6 @@ export class DataService {
     }
   }
 
-  async getTrackFilePath(trackId: string): Promise<{uri: string, path: string} | null> {
-    await this.ensureInit();
-    const res = await this.db.query(
-      `SELECT file_uri, file_path FROM downloaded_music WHERE track_id = ?;`,
-      [trackId]
-    );
-
-    if (res.values?.length) {
-      return {
-        uri: res.values[0].file_uri,
-        path: res.values[0].file_path
-      };
-    }
-    return null;
-  }
-
   async saveTrack(track: any): Promise<boolean> {
     await this.ensureInit();
     await this.db.run(
@@ -369,29 +252,6 @@ export class DataService {
     return null;
   }
 
-  async queryTracks(query: string, params: any[] = []): Promise<any[]> {
-    await this.ensureInit();
-
-    try {
-      const result = await this.db.query(query, params);
-      return result.values || [];
-    } catch (error) {
-      console.error('Error executing track query:', error);
-      throw error;
-    }
-  }
-
-  async executeSql(sql: string, params: any[] = []): Promise<any> {
-    await this.ensureInit();
-
-    const trimmed = sql.trim().toUpperCase();
-    if (trimmed.startsWith('SELECT')) {
-      return this.db.query(sql, params);
-    } else {
-      return this.db.run(sql, params);
-    }
-  }
-
   async set(key: string, value: any): Promise<void> {
     await this.ensureInit();
     const str = JSON.stringify(value);
@@ -399,31 +259,6 @@ export class DataService {
       `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?);`,
       [key, str]
     );
-  }
-
-  async get(key: string): Promise<any> {
-    await this.ensureInit();
-    const res = await this.db.query(
-      `SELECT value FROM settings WHERE key = ?;`,
-      [key]
-    );
-    if (res.values?.length) {
-      try {
-        return JSON.parse(res.values[0].value);
-      } catch {
-        return res.values[0].value;
-      }
-    }
-    return null;
-  }
-
-  async toggleLikedTrack(trackId: string, liked: boolean): Promise<boolean> {
-    await this.ensureInit();
-    if (liked) {
-      return this.addLiked(trackId);
-    } else {
-      return this.removeLiked(trackId);
-    }
   }
 
   async saveLocalMusic(track: Track, filePath: string = ''): Promise<boolean> {
@@ -442,91 +277,256 @@ export class DataService {
     return true;
   }
 
-  async getDownloadedTracksWithInfo(): Promise<Track[]> {
-    await this.ensureInit();
-    const res = await this.db.query(`
-      SELECT t.id, t.title, t.artist, t.album,
-             t.duration, t.image_url AS imageUrl,
-             t.preview_url AS previewUrl,
-             t.spotify_id AS spotifyId,
-             t.liked, t.is_local AS isLocal
-        FROM tracks t
-        JOIN downloaded_music dm ON dm.track_id = t.id
-      ORDER BY dm.downloaded_at DESC;
-    `);
+  /** Returns new row ID or -1 */
+  // async createPlaylist(name: string): Promise<number> {
+  //   await this.ensureInit();
+  //   const now = new Date().toISOString();
+  //   const res = await this.db.run(
+  //     `INSERT INTO playlists (name, created_at, updated_at)
+  //      VALUES (?, ?, ?);`,
+  //     [name, now, now]
+  //   );
+  //   return res.changes?.lastId ?? -1;
+  // }
 
-    return (res.values || []).map((r: any) => ({
-      id: r.id,
-      title: r.title,
-      artist: r.artist,
-      album: r.album,
-      duration: r.duration,
-      imageUrl: r.imageUrl,
-      previewUrl: r.previewUrl,
-      spotifyId: r.spotifyId,
-      liked: !!r.liked,
-      isLocal: !!r.isLocal
-    }));
-  }
+  // async getPlaylists(): Promise<{id:number;name:string;created_at:string;updated_at:string}[]> {
+  //   await this.ensureInit();
+  //   const res = await this.db.query(`
+  //     SELECT id, name, created_at, updated_at
+  //       FROM playlists
+  //      ORDER BY created_at DESC;
+  //   `);
+  //   return res.values || [];
+  // }
+
+  // ---------- Playlist ↔ Track ----------
+
+  // async addTrackToPlaylist(
+  //   playlistId: number,
+  //   trackId: string,
+  //   position?: number
+  // ): Promise<boolean> {
+  //   await this.ensureInit();
+  //   if (position === undefined) {
+  //     const r = await this.db.query(
+  //       `SELECT MAX(position) AS max_pos FROM playlist_tracks WHERE playlist_id = ?;`,
+  //       [playlistId]
+  //     );
+  //     position = (r.values?.[0]?.max_pos ?? -1) + 1;
+  //   }
+  //   await this.db.run(
+  //     `INSERT OR REPLACE INTO playlist_tracks
+  //        (playlist_id, track_id, position)
+  //      VALUES (?, ?, ?);`,
+  //     [playlistId, trackId, position]
+  //   );
+  //   return true;
+  // }
+
+  // async getPlaylistTracks(playlistId: number): Promise<Track[]> {
+  //   await this.ensureInit();
+  //   const res = await this.db.query(`
+  //     SELECT t.id, t.title, t.artist, t.album,
+  //            t.duration, t.image_url AS imageUrl,
+  //            t.preview_url AS previewUrl,
+  //            t.spotify_id AS spotifyId,
+  //            t.liked, t.is_local AS isLocal
+  //       FROM tracks t
+  //       JOIN playlist_tracks pt
+  //         ON pt.track_id = t.id
+  //      WHERE pt.playlist_id = ?
+  //      ORDER BY pt.position;
+  //   `, [playlistId]);
+
+  //   return (res.values || []).map((r: any) => ({
+  //     id: r.id,
+  //     title: r.title,
+  //     artist: r.artist,
+  //     album: r.album,
+  //     duration: r.duration,
+  //     imageUrl: r.imageUrl,
+  //     previewUrl: r.previewUrl,
+  //     spotifyId: r.spotifyId,
+  //     liked: !!r.liked,
+  //     isLocal: !!r.isLocal
+  //   }));
+  // }
   
-  async fileExists(path: string): Promise<boolean> {
-    try {
-      await Filesystem.stat({
-        path,
-        directory: Directory.Data
-      });
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
+  // async getLikedTracks(): Promise<Track[]> {
+  //   await this.ensureInit();
+  //   const res = await this.db.query(`
+  //     SELECT t.id, t.title, t.artist, t.album,
+  //            t.duration, t.image_url AS imageUrl,
+  //            t.preview_url AS previewUrl,
+  //            t.spotify_id AS spotifyId,
+  //            1 AS liked, t.is_local AS isLocal
+  //       FROM tracks t
+  //       JOIN liked_music lm ON lm.track_id = t.id
+  //      ORDER BY lm.liked_at DESC;
+  //   `);
+  //   return (res.values || []).map((r: any) => ({
+  //     id: r.id,
+  //     title: r.title,
+  //     artist: r.artist,
+  //     album: r.album,
+  //     duration: r.duration,
+  //     imageUrl: r.imageUrl,
+  //     previewUrl: r.previewUrl,
+  //     spotifyId: r.spotifyId,
+  //     liked: true,
+  //     isLocal: !!r.isLocal
+  //   }));
+  // }
 
-  async verifyLocalTrack(trackId: string): Promise<boolean> {
-    try {
-      const track = await this.getTrack(trackId);
-      if (!track || !track.isLocal) return false;
-      const fileInfo = await this.getTrackFilePath(trackId);
-      if (!fileInfo) return false;
-      let exists = false;
+  // async getTrackFilePath(trackId: string): Promise<{uri: string, path: string} | null> {
+  //   await this.ensureInit();
+  //   const res = await this.db.query(
+  //     `SELECT file_uri, file_path FROM downloaded_music WHERE track_id = ?;`,
+  //     [trackId]
+  //   );
 
-      if (fileInfo.uri.startsWith('blob:')) {
-        return true;
-      }
+  //   if (res.values?.length) {
+  //     return {
+  //       uri: res.values[0].file_uri,
+  //       path: res.values[0].file_path
+  //     };
+  //   }
+  //   return null;
+  // }
 
-      try {
-        if (fileInfo.uri.startsWith('file://')) {
-          const path = fileInfo.uri.replace(/^file:\/\//, '');
-          await Filesystem.stat({
-            path,
-            directory: Directory.Data
-          });
-          exists = true;
-        }else {
-          await Filesystem.stat({
-            path: fileInfo.path,
-            directory: Directory.Data
-          });
-          exists = true;
-        }
-      } catch (e) {
-        try {
-          await Filesystem.stat({
-            path: fileInfo.path,
-            directory: Directory.Data
-          });
-          await this.db.run(
-            `UPDATE downloaded_music SET file_uri = ? WHERE track_id = ?`,
-            [fileInfo.path, trackId]
-          );
+  // async queryTracks(query: string, params: any[] = []): Promise<any[]> {
+  //   await this.ensureInit();
 
-          exists = true;
-        } catch (backupError) {
-          exists = false;
-        }
-      }
-      return exists;
-    } catch (error) {
-      return false;
-    }
-  }
+  //   try {
+  //     const result = await this.db.query(query, params);
+  //     return result.values || [];
+  //   } catch (error) {
+  //     console.error('Error executing track query:', error);
+  //     throw error;
+  //   }
+  // }
+
+  // async executeSql(sql: string, params: any[] = []): Promise<any> {
+  //   await this.ensureInit();
+
+  //   const trimmed = sql.trim().toUpperCase();
+  //   if (trimmed.startsWith('SELECT')) {
+  //     return this.db.query(sql, params);
+  //   } else {
+  //     return this.db.run(sql, params);
+  //   }
+  // }
+
+  // async get(key: string): Promise<any> {
+  //   await this.ensureInit();
+  //   const res = await this.db.query(
+  //     `SELECT value FROM settings WHERE key = ?;`,
+  //     [key]
+  //   );
+  //   if (res.values?.length) {
+  //     try {
+  //       return JSON.parse(res.values[0].value);
+  //     } catch {
+  //       return res.values[0].value;
+  //     }
+  //   }
+  //   return null;
+  // }
+
+  // async toggleLikedTrack(trackId: string, liked: boolean): Promise<boolean> {
+  //   await this.ensureInit();
+  //   if (liked) {
+  //     return this.addLiked(trackId);
+  //   } else {
+  //     return this.removeLiked(trackId);
+  //   }
+  // }
+
+  // async getDownloadedTracksWithInfo(): Promise<Track[]> {
+  //   await this.ensureInit();
+  //   const res = await this.db.query(`
+  //     SELECT t.id, t.title, t.artist, t.album,
+  //            t.duration, t.image_url AS imageUrl,
+  //            t.preview_url AS previewUrl,
+  //            t.spotify_id AS spotifyId,
+  //            t.liked, t.is_local AS isLocal
+  //       FROM tracks t
+  //       JOIN downloaded_music dm ON dm.track_id = t.id
+  //     ORDER BY dm.downloaded_at DESC;
+  //   `);
+
+  //   return (res.values || []).map((r: any) => ({
+  //     id: r.id,
+  //     title: r.title,
+  //     artist: r.artist,
+  //     album: r.album,
+  //     duration: r.duration,
+  //     imageUrl: r.imageUrl,
+  //     previewUrl: r.previewUrl,
+  //     spotifyId: r.spotifyId,
+  //     liked: !!r.liked,
+  //     isLocal: !!r.isLocal
+  //   }));
+  // }
+  
+  // async fileExists(path: string): Promise<boolean> {
+  //   try {
+  //     await Filesystem.stat({
+  //       path,
+  //       directory: Directory.Data
+  //     });
+  //     return true;
+  //   } catch (error) {
+  //     return false;
+  //   }
+  // }
+
+  // async verifyLocalTrack(trackId: string): Promise<boolean> {
+  //   try {
+  //     const track = await this.getTrack(trackId);
+  //     if (!track || !track.isLocal) return false;
+  //     const fileInfo = await this.getTrackFilePath(trackId);
+  //     if (!fileInfo) return false;
+  //     let exists = false;
+
+  //     if (fileInfo.uri.startsWith('blob:')) {
+  //       return true;
+  //     }
+
+  //     try {
+  //       if (fileInfo.uri.startsWith('file://')) {
+  //         const path = fileInfo.uri.replace(/^file:\/\//, '');
+  //         await Filesystem.stat({
+  //           path,
+  //           directory: Directory.Data
+  //         });
+  //         exists = true;
+  //       }else {
+  //         await Filesystem.stat({
+  //           path: fileInfo.path,
+  //           directory: Directory.Data
+  //         });
+  //         exists = true;
+  //       }
+  //     } catch (e) {
+  //       try {
+  //         await Filesystem.stat({
+  //           path: fileInfo.path,
+  //           directory: Directory.Data
+  //         });
+  //         await this.db.run(
+  //           `UPDATE downloaded_music SET file_uri = ? WHERE track_id = ?`,
+  //           [fileInfo.path, trackId]
+  //         );
+
+  //         exists = true;
+  //       } catch (backupError) {
+  //         exists = false;
+  //       }
+  //     }
+  //     return exists;
+  //   } catch (error) {
+  //     return false;
+  //   }
+  // }
 }

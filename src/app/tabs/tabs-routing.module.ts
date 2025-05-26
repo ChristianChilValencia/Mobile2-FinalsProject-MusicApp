@@ -35,10 +35,6 @@ const routes: Routes = [
         loadChildren: () => import('../pages/local-home/local-home.module').then(m => m.HomePageModule)
       },
       {
-        path: 'local-library',
-        loadChildren: () => import('../pages/local-library/local-library.module').then(m => m.LibraryPageModule)
-      },
-      {
         path: '',
         redirectTo: '/tabs/home',
         pathMatch: 'full'

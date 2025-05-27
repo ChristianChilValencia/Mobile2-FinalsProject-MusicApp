@@ -15,8 +15,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
   styleUrls: ['./uploads.page.scss'],
   standalone: false
 })
-export class UploadsPage implements OnInit, OnDestroy {
-  @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
+export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
   // Local music state
   localMusic: Track[] = [];  isDarkMode = false;
   private settingsSub?: Subscription;
@@ -24,14 +23,45 @@ export class UploadsPage implements OnInit, OnDestroy {
   // Current playback state
   private playbackSubscription: Subscription | null = null;
   currentPlaybackState: any = null;
+  // Track deletion
+  async deleteTrack(track: Track) {
+    const alert = await this.alertCtrl.create({
+      header: 'Delete Track',
+      message: `Are you sure you want to delete "${track.title}"?`,
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: async () => {
+            try {
+              await this.dataService.removeTrack(track.id);
+              this.showToast('Track deleted');
+              await this.refreshLocalMusic();
+              return true;
+            } catch (error) {
+              console.error('Error deleting track:', error);
+              this.showToast('Failed to delete track', 'danger');
+              return false;
+            }
+          }
+        }
+      ]
+    });
+    
+    await alert.present();
+  }
 
-  // Slider configuration
-  slideOpts = {
-    slidesPerView: 'auto',
-    spaceBetween: 20,
-    freeMode: true,
-    pagination: false
-  };
+  // Format duration for display
+  formatDuration(seconds: number): string {
+    if (!seconds) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  }
   constructor(
     public audioService: MediaPlayerService,
     private dataService: LocalDataService,

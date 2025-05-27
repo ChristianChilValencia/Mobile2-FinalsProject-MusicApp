@@ -13,56 +13,56 @@
   <input type="file" #fileInput style="display:none" 
          accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.opus" 
          multiple (change)="onFileSelected($event)">
-
-  <ion-card class="upload-section">
-    <ion-card-header>
-      <ion-card-title>Add Local Audio Files</ion-card-title>
-      <ion-card-subtitle>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</ion-card-subtitle>
-    </ion-card-header>
-    
-    <ion-card-content>
-      <ion-button expand="block" (click)="requestAudioPermissions(); openFileSelector()" class="upload-area">
+  <div class="uploads-container">
+    <!-- Upload Section -->
+    <div class="upload-header">
+      <h2>Add Local Audio Files</h2>
+      <p>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</p>
+      <ion-button expand="block" fill="clear" (click)="requestAudioPermissions(); openFileSelector()" class="upload-area">
         <ion-icon slot="start" name="cloud-upload"></ion-icon>
         Tap to select files
       </ion-button>
-    </ion-card-content>
-    
-    <ion-card-header>
-      <ion-card-title>Your Music</ion-card-title>
-    </ion-card-header>
+    </div>
 
-    <ion-card-content>
-      <ion-grid *ngIf="localMusic.length === 0" class="empty-state">
-        <ion-row class="ion-justify-content-center">
-          <ion-col size="12" class="ion-text-center">
-            <ion-icon name="musical-notes" size="large"></ion-icon>
-            <h3>No local music found</h3>
-            <p>Upload music files to get started</p>
-          </ion-col>
-        </ion-row>
-      </ion-grid>      <swiper-container [options]="slideOpts" *ngIf="localMusic.length > 0">        <swiper-slide *ngFor="let track of localMusic">
-          <ion-card class="music-card" (click)="playTrack(track)">
-            <img [src]="track.imageUrl || 'assets/music-bg.png'" [alt]="track.title">
-            <ion-card-header>
-              <ion-card-title>{{track.title}}</ion-card-title>
-              <ion-card-subtitle>{{track.artist}}</ion-card-subtitle>
-            </ion-card-header>
-            <div class="play-overlay">
-              <ion-icon [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
-            </div>
-            <div class="card-actions">
-              <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
-                <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
-              </ion-button>
-              <ion-button fill="clear" (click)="addToPlaylist(track); $event.stopPropagation()">
-                <ion-icon slot="icon-only" name="add"></ion-icon>
-              </ion-button>
-            </div>
-          </ion-card>
-        </swiper-slide>
-      </swiper-container>
-    </ion-card-content>
-  </ion-card>
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="localMusic.length === 0">
+      <ion-icon name="musical-notes" size="large"></ion-icon>
+      <h3>No local music found</h3>
+      <p>Upload music files to get started</p>
+    </div>
+
+    <!-- Track List -->
+    <ion-list *ngIf="localMusic.length > 0">
+      <h2 class="section-title">Your Music</h2>
+      <ion-item-sliding *ngFor="let track of localMusic">
+        <ion-item button detail="false" (click)="playTrack(track)">
+          <ion-thumbnail slot="start">
+            <img [src]="track.artwork || track.imageUrl || 'assets/placeholder-album.png'" [alt]="track.title">
+          </ion-thumbnail>
+          <ion-label>
+            <h2>{{ track.title }}</h2>
+            <h3>{{ track.artist }}</h3>
+            <p *ngIf="track.album">{{ track.album }}</p>
+          </ion-label>
+            
+          <div class="item-actions" slot="end">
+            <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
+              <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" (click)="addToPlaylist(track); $event.stopPropagation()">
+              <ion-icon slot="icon-only" name="add"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-item>
+          
+        <ion-item-options side="end">
+          <ion-item-option color="danger" (click)="deleteTrack(track)">
+            <ion-icon slot="icon-only" name="trash"></ion-icon>
+          </ion-item-option>
+        </ion-item-options>
+      </ion-item-sliding>
+    </ion-list>
+  </div>
 </ion-content>
 
 <!-- Removed mini-player from local-home since we're using the global mini-player component in tabs.page.html -->

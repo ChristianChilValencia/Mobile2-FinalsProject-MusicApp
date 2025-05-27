@@ -1,132 +1,138 @@
-.upload-section {
-  padding-bottom: 16px;
-  
+.uploads-container {
+  padding: 16px;
+
+  .upload-header {
+    margin-bottom: 24px;
+
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: var(--ion-color-medium);
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+  }
+
+  .upload-area {
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;    border: 2px dashed var(--ion-color-medium);
+    border-radius: 8px;
+    background: transparent;
+    margin-bottom: 24px;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: rgba(var(--ion-color-medium-rgb), 0.1);
+    }
+    
+    ion-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 24px 0 16px;
+  }
+
   .empty-state {
-    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 16px;
     text-align: center;
     
     ion-icon {
-      font-size: 48px;
-      margin-bottom: 10px;
-      opacity: 0.5;
+      font-size: 64px;
+      color: var(--ion-color-medium);
+      margin-bottom: 16px;
     }
     
     h3 {
-      margin: 10px 0;
       font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
     }
     
     p {
       color: var(--ion-color-medium);
-      margin: 0 0 15px;
+      margin-bottom: 24px;
     }
   }
-}
 
-.upload-area {
-  height: 150px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 2px dashed var(--ion-color-medium);
-  border-radius: 8px;
-  margin: 10px 0;
-  
-  ion-icon {
-    font-size: 32px;
-    margin-bottom: 10px;
-  }
-}
-
-// Styles for the music cards
-.music-card {
-  position: relative;
-  width: 160px;
-  margin: 0;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  
-  img {
-    width: 100%;
-    height: 160px;
-    object-fit: cover;
-  }
-  
-  ion-card-header {
-    padding: 10px;
+  ion-list {
+    background: transparent;
+    padding: 0;
     
-    ion-card-title {
-      font-size: 14px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    ion-card-subtitle {
-      font-size: 12px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-  
-  .play-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -70%);
-    width: 40px;
-    height: 40px;
-    background-color: rgba(0, 0, 0, 0.6);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.8;
-    transition: all 0.2s ease;
-    
-    ion-icon {
-      font-size: 24px;
-      color: white;
-    }
-  }
-  
-  &:hover .play-overlay {
-    opacity: 1;
-    transform: translate(-50%, -70%) scale(1.1);
-  }
-  
-  // Card actions (buttons)
-  .card-actions {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    display: flex;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.6);
-    border-top-left-radius: 8px;
-    
-    ion-button {
-      --padding-start: 4px;
-      --padding-end: 4px;
-      height: 30px;
+    ion-item {
+      --padding-start: 0;
+      margin-bottom: 8px;
+      border-radius: 8px;
       
-      ion-icon {
-        font-size: 16px;
-        color: white;
+      ion-thumbnail {
+        width: 56px;
+        height: 56px;
+        --border-radius: 4px;
+      }
+      
+      ion-label {
+        h2 {
+          font-weight: 500;
+          margin-bottom: 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        h3 {
+          font-size: 14px;
+          color: var(--ion-color-medium);
+          margin-bottom: 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        p {
+          font-size: 12px;
+          color: var(--ion-color-medium-shade);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+      
+      ion-note {
+        font-size: 12px;
+        align-self: center;
+      }
+      
+      .item-actions {
+        display: flex;
+        align-items: center;
+        
+        ion-button {
+          --padding-start: 4px;
+          --padding-end: 4px;
+          margin: 0;
+          height: 32px;
+          
+          ion-icon {
+            font-size: 18px;
+          }
+        }
       }
     }
-  }
-}
-
-// Customize swiper container
-swiper-container {
-  padding: 10px 0;
-  
-  swiper-slide {
-    width: auto;
   }
 }
 
@@ -136,13 +142,6 @@ swiper-container {
   
   .upload-area {
     border-color: #444;
-  }
-  
-  .music-card {
-    background: #222;
-    
-    ion-card-title, ion-card-subtitle {
-      color: #fff;
-    }
+    background: rgba(255, 255, 255, 0.1);
   }
 }

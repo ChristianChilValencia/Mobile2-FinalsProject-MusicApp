@@ -43,11 +43,31 @@
   object-fit: cover;
   border-radius: 12px;
 }
-.track-info {
+.track-info-container {
   width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 16px;
   margin: 10px 0;
-  padding: 0 10px;
-  flex-shrink: 0;
+}
+
+.track-info {
+  flex: 1;
+  text-align: left;
+  margin-right: 16px;
+  min-width: 0; /* Allow text truncation to work */
+}
+
+.add-playlist-button {
+  --border-radius: 50%;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  margin: 0;
+  
+  ion-icon {
+    font-size: 24px;
+  }
 }
 .title {
   font-size: clamp(1.2rem, 5vw, 1.8rem);

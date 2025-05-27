@@ -17,23 +17,29 @@
         <img [src]="playbackState.currentTrack?.artwork || 'assets/placeholder-album.png'" alt="Album Art">
       </div>
     </div>
-    
-    <!-- Track Info Section -->
-    <div class="track-info">
-      <h1 class="title">{{ playbackState.currentTrack?.title || 'No Track Playing' }}</h1>
-      <h2 class="artist">{{ playbackState.currentTrack?.artist || 'Unknown Artist' }}</h2>
-      <h3 class="album" *ngIf="playbackState.currentTrack?.album">{{ playbackState.currentTrack?.album }}</h3>
+      <!-- Track Info Section -->
+    <div class="track-info-container">
+      <div class="track-info">
+        <h1 class="title">{{ playbackState.currentTrack?.title || 'No Track Playing' }}</h1>
+        <h2 class="artist">{{ playbackState.currentTrack?.artist || 'Unknown Artist' }}</h2>
+        <h3 class="album" *ngIf="playbackState.currentTrack?.album">{{ playbackState.currentTrack?.album }}</h3>
+      </div>
+      <ion-button fill="clear" class="add-playlist-button" (click)="addCurrentTrackToPlaylist()" *ngIf="playbackState.currentTrack">
+        <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
+      </ion-button>
     </div>
-    
-    <!-- Seek Bar Section -->
-    <div class="seek-controls">      <div class="time-display">
+      <!-- Seek Bar Section -->
+    <div class="seek-controls">
+      <div class="time-display">
         <div class="current-time">{{ formatTime(playbackState.currentTime) }}</div>
-        <div class="total-time">0:30</div>
-      </div><ion-range
+        <div class="total-time">{{ formatTime(playbackState.duration) }}</div>
+      </div>
+      <ion-range
         [value]="playbackState.currentTime"
         (ionChange)="onSeekChange($event)"
-        [max]="30"
-        class="seek-bar">
+        [max]="playbackState.duration || 0"
+        class="seek-bar"
+        [disabled]="!playbackState.currentTrack">
       </ion-range>
     </div>
       <!-- Playback Controls -->
@@ -45,14 +51,9 @@
         <ion-button fill="clear" class="control-button play-button" (click)="togglePlay()">
         <ion-icon slot="icon-only" [name]="playbackState.isPlaying ? 'pause' : 'play'"></ion-icon>
       </ion-button>
-      
-      <ion-button fill="clear" class="control-button" (click)="skipForward()">
+        <ion-button fill="clear" class="control-button" (click)="skipForward()">
         <ion-icon slot="icon-only" name="play-forward"></ion-icon>
         <span class="skip-label">+5s</span>
-      </ion-button>
-      
-      <ion-button fill="clear" class="control-button add-playlist" (click)="addCurrentTrackToPlaylist()">
-        <ion-icon slot="icon-only" name="add-circle"></ion-icon>
       </ion-button>
     </div>
   </div>

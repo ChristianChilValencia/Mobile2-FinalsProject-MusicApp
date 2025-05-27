@@ -24,12 +24,14 @@ export class HomePage implements OnInit, OnDestroy {
     private mediaPlayerService: MediaPlayerService,
     private navCtrl: NavController,
     private actionSheetController: ActionSheetController
-  ) {}
-  ngOnInit() {
+  ) {}  ngOnInit() {
     this.tracksSubscription = this.dataService.tracks$.subscribe(tracks => {
-      this.recentlyPlayed = tracks.slice(0, 10);
-      
-      this.modeChanged();
+      // Don't set recently played from all tracks
+      // Only get tracks specifically marked as recently played
+      this.dataService.getRecentlyPlayedTracks().then(recentTracks => {
+        this.recentlyPlayed = recentTracks;
+        this.modeChanged();
+      });
     });
     
     this.playlistsSubscription = this.dataService.playlists$.subscribe(playlists => {
@@ -64,13 +66,15 @@ export class HomePage implements OnInit, OnDestroy {
     } else if (this.currentMode === 'streaming') {
       this.recentlyPlayed = this.recentlyPlayed.filter(track => track.source === 'stream');
     }
-  }
-  playTrack(track: Track) {
-    this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== track.id);
-    this.recentlyPlayed.unshift(track);
-    if (this.recentlyPlayed.length > 10) {
-      this.recentlyPlayed.pop();
-    }
+  }  async playTrack(track: Track) {
+    // Update recently played through data service
+    await this.dataService.addToRecentlyPlayed(track.id);
+    
+    // Refresh the recently played list
+    const recentTracks = await this.dataService.getRecentlyPlayedTracks();
+    this.recentlyPlayed = recentTracks;
+    
+    // Then play the track
     this.mediaPlayerService.setQueue([track], 0);
   }
 
@@ -150,15 +154,14 @@ export class HomePage implements OnInit, OnDestroy {
       this.currentPlaybackState.currentTrack?.id === track.id
     );
   }
-  
-  // Toggle play/pause for a track
-  togglePlayTrack(track: Track): void {
+    // Toggle play/pause for a track
+  async togglePlayTrack(track: Track): Promise<void> {
     if (this.currentPlaybackState?.currentTrack?.id === track.id) {
       // The track is already the current track, toggle play/pause
       this.mediaPlayerService.togglePlay();
     } else {
       // It's a different track, start playing it
-      this.playTrack(track);
+      await this.playTrack(track);
     }
   }
 }

@@ -103,9 +103,9 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     
     // Apply source filter if not 'all'
     if (this.sourceFilter === 'local') {
-      this.filteredTracks = this.filteredTracks.filter(track => track.isLocal === true);
+      this.filteredTracks = this.filteredTracks.filter(track => track.source === 'local');
     } else if (this.sourceFilter === 'stream') {
-      this.filteredTracks = this.filteredTracks.filter(track => track.isLocal !== true);
+      this.filteredTracks = this.filteredTracks.filter(track => track.source === 'stream');
     }
     
     // Sort by title

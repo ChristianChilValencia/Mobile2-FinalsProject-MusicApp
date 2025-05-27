@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ActionSheetController, AlertController, NavController, ToastController } from '@ionic/angular';
 import { DataService, Track, Playlist } from '../../services/data.service';
@@ -17,6 +17,8 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
   playlistId: string | null = null;
   currentPlaybackState: PlaybackState | null = null;
   private playbackSubscription: Subscription | null = null;
+
+  @ViewChild('coverArtInput', { static: false }) coverArtInput!: ElementRef;
 
   constructor(
     private route: ActivatedRoute,
@@ -479,6 +481,61 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
       return false;
     }
   }
+
+  // Trigger the hidden file input when clicking on cover art
+  triggerCoverArtUpload(): void {
+    this.coverArtInput.nativeElement.click();
+  }
+
+  // Handle cover art file selection
+  async onCoverArtSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+      this.showToast('Please select an image file', 'warning');
+      return;
+    }
+
+    // File size validation - let's limit to 5MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      this.showToast('Image is too large. Please select an image under 5MB', 'warning');
+      return;
+    }
+
+    // Read file as data URL
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        if (!e.target?.result) return;
+        
+        // Save cover art and update playlist
+        if (this.playlist) {
+          const coverArtDataUrl = e.target.result as string;
+          await this.dataService.updatePlaylistDetails(
+            this.playlist.id,
+            this.playlist.name,
+            this.playlist.description || undefined,
+            coverArtDataUrl
+          );
+          
+          // Reload the playlist to show new cover art
+          await this.loadPlaylist(this.playlist.id);
+          this.showToast('Playlist cover art updated');
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading cover art:', error);
+      this.showToast('Failed to update cover art', 'danger');
+    } finally {
+      // Clear the input
+      input.value = '';
+    }
+  }
+
   private async showToast(message: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message,

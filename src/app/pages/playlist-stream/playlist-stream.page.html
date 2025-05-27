@@ -1,16 +1,16 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-buttons slot="start">
+  <ion-toolbar>    <ion-buttons slot="start">
       <ion-back-button defaultHref="/tabs/library"></ion-back-button>
     </ion-buttons>    <ion-title>{{ playlist?.name || 'Playlist' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <input #coverArtInput type="file" accept="image/*" style="display:none" (change)="onCoverArtSelected($event)">
   <div class="playlist-container">
     <!-- Playlist header -->
      <div class="playlist-header" *ngIf="playlist">
-      <div class="playlist-cover">
+      <div class="playlist-cover" (click)="triggerCoverArtUpload()">
         <img [src]="playlist.coverArt || (playlistTracks.length > 0 ? (playlistTracks[0].artwork || playlistTracks[0].imageUrl) : 'assets/placeholder-playlist.png')" alt="Playlist Cover">
       </div>
       <div class="playlist-info">

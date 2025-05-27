@@ -48,8 +48,25 @@ export enum RepeatMode {
 })
 export class DataService {
   getPlaylistCoverArt(playlist: Playlist): string | PromiseLike<string | null> | null {
-    throw new Error('Method not implemented.');
+    // Return the playlist's cover art if it exists
+    if (playlist.coverArt) {
+      return playlist.coverArt;
+    }
+
+    // If there are no tracks, return null
+    if (!playlist.trackIds?.length) {
+      return null;  
+    }
+
+    // Try to get artwork from first track
+    const firstTrack = this.tracksSubject.value.find(t => t.id === playlist.trackIds[0]);
+    if (firstTrack?.artwork || firstTrack?.imageUrl) {
+      return firstTrack.artwork || firstTrack.imageUrl;
+    }
+
+    return null;
   }
+
   private tracksSubject = new BehaviorSubject<Track[]>([]);
   private playlistsSubject = new BehaviorSubject<Playlist[]>([]);
   private sqlite: SQLiteConnection;
@@ -257,60 +274,68 @@ export class DataService {
       throw error;
     }
   }
-
-  async addLiked(trackId: string): Promise<void> {
+  async addToRecentlyPlayed(trackId: string): Promise<void> {
     try {
       const tracks = this.tracksSubject.value;
       const track = tracks.find(t => t.id === trackId);
+      
       if (!track) return;
-
-      track.liked = true;
-      this.tracksSubject.next(tracks);
+      
+      // Create a new array of recent tracks
+      let recentTracks = await this.get('recently_played') || [];
+      
+      // Remove the track if it's already in the list to avoid duplicates
+      recentTracks = recentTracks.filter((id: string) => id !== trackId);
+      
+      // Add the track ID to the beginning of the array
+      recentTracks.unshift(trackId);
+      
+      // Limit to most recent 20 tracks
+      if (recentTracks.length > 20) {
+        recentTracks = recentTracks.slice(0, 20);
+      }
+      
+      // Save the updated recent tracks
+      await this.set('recently_played', recentTracks);
+      
+      // Update the track's lastPlayed timestamp
+      track.lastPlayed = new Date().toISOString();
+      this.tracksSubject.next([...tracks]);
       await this.saveTracks(tracks);
-
+      
+      // Update SQLite if on mobile
       if (this.platform.is('hybrid')) {
         await this.ensureInit();
-        const now = new Date().toISOString();
         await this.db.run(
-          `INSERT OR IGNORE INTO liked_music (track_id, liked_at) VALUES (?, ?);`,
-          [trackId, now]
-        );
-        await this.db.run(
-          `UPDATE tracks SET liked = 1 WHERE id = ?;`,
-          [trackId]
+          `UPDATE tracks SET last_played = ? WHERE id = ?;`,
+          [track.lastPlayed, trackId]
         );
       }
     } catch (error) {
-      console.error('Error adding liked track:', error);
-      throw error;
+      console.error('Error adding track to recently played:', error);
+    }
+  }async getRecentlyPlayedTracks(): Promise<Track[]> {
+    try {
+      const recentTrackIds = await this.get('recently_played') || [];
+      const tracks = this.tracksSubject.value;
+      
+      // Get the track objects for the recent IDs, maintain order
+      const recentTracks: Track[] = [];
+      for (const id of recentTrackIds) {
+        const track = tracks.find(t => t.id === id);
+        if (track) {
+          recentTracks.push(track);
+        }
+      }
+      
+      return recentTracks;
+    } catch (error) {
+      console.error('Error getting recently played tracks:', error);
+      return [];
     }
   }
-
-  async removeLiked(trackId: string): Promise<void> {
-    try {
-      const tracks = this.tracksSubject.value;
-      const track = tracks.find(t => t.id === trackId);
-      if (!track) return;
-
-      track.liked = false;
-      this.tracksSubject.next(tracks);
-      await this.saveTracks(tracks);
-
-      if (this.platform.is('hybrid')) {
-        await this.ensureInit();
-        await this.db.run(
-          `DELETE FROM liked_music WHERE track_id = ?;`,
-          [trackId]
-        );
-        await this.db.run(
-          `UPDATE tracks SET liked = 0 WHERE id = ?;`,
-          [trackId]
-        );
-      }
-    } catch (error) {
-      console.error('Error removing liked track:', error);
-      throw error;
-    }
+  async getAllTracks(): Promise<Track[]> {
+    return this.tracksSubject.value;
   }
 
   async getTrack(id: string): Promise<Track | null> {
@@ -318,70 +343,170 @@ export class DataService {
     return tracks.find(track => track.id === id) || null;
   }
 
-  async getAllTracks(): Promise<Track[]> {
-    return this.tracksSubject.value;
-  }
-
-  async getLocalTracks(): Promise<Track[]> {
-    return this.tracksSubject.value.filter(track => track.source === 'local');
-  }
-
-  async getStreamTracks(): Promise<Track[]> {
-    return this.tracksSubject.value.filter(track => track.source === 'stream');
-  }
-
-  async removeTrack(id: string): Promise<void> {
+  async loadTracks(): Promise<void> {
     try {
-      const tracks = this.tracksSubject.value;
-      const track = tracks.find(t => t.id === id);
-      
-      if (track && track.source === 'local' && track.localPath) {
-        // Delete the actual file for local tracks
-        try {
-          if (track.previewUrl?.startsWith('blob:')) {
-            console.log('Blob URL will be garbage collected:', track.previewUrl);
-          }
-          else if (track.previewUrl?.startsWith('file://')) {
-            const path = track.previewUrl.replace(/^file:\/\//, '');
-            await Filesystem.deleteFile({
-              path,
-              directory: Directory.Data
-            });
-          }
-        } catch (fileError) {
-          console.warn('Error deleting file:', fileError);
-        }
-      }
-      
-      // Update tracks array
-      const updatedTracks = tracks.filter(t => t.id !== id);
-      this.tracksSubject.next(updatedTracks);
-      await this.saveTracks(updatedTracks);
-      
-      // Remove from SQLite tables on mobile
-      if (this.platform.is('hybrid')) {
-        await this.ensureInit();
-        await this.db.run('DELETE FROM tracks WHERE id = ?', [id]);
-        await this.db.run('DELETE FROM liked_music WHERE track_id = ?', [id]);
-        await this.db.run('DELETE FROM downloaded_music WHERE track_id = ?', [id]);
-        await this.db.run('DELETE FROM playlist_tracks WHERE track_id = ?', [id]);
-      }
-      
-      // Remove track from playlists
+      const tracks = await this.get('tracks') || [];
+      this.tracksSubject.next(tracks);
+    } catch (error) {
+      console.error('Error loading tracks:', error);
+    }
+  }
+
+  async saveTracks(tracks: Track[]): Promise<void> {
+    try {
+      await this.set('tracks', tracks);
+    } catch (error) {
+      console.error('Error saving tracks:', error);
+    }
+  }
+
+  // Playlist methods
+  async getAllPlaylists(): Promise<Playlist[]> {
+    return this.playlistsSubject.value;
+  }
+
+  async createPlaylist(name: string, description?: string): Promise<Playlist> {
+    const playlists = this.playlistsSubject.value;
+    const now = new Date().toISOString();
+    
+    const newPlaylist: Playlist = {
+      id: uuidv4(),
+      name,
+      description,
+      trackIds: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    playlists.push(newPlaylist);
+    this.playlistsSubject.next(playlists);
+    await this.savePlaylists(playlists);
+    
+    return newPlaylist;
+  }
+  async addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
+    const playlists = this.playlistsSubject.value;
+    const playlist = playlists.find(p => p.id === playlistId);
+    
+    if (!playlist) {
+      throw new Error(`Playlist with ID ${playlistId} not found`);
+    }
+    
+    // Add track if not already in playlist
+    if (!playlist.trackIds.includes(trackId)) {
+      playlist.trackIds.push(trackId);
+      playlist.updatedAt = new Date().toISOString();
+      this.playlistsSubject.next([...playlists]);
+      await this.savePlaylists(playlists);
+    }
+  }
+
+  async getPlaylist(playlistId: string): Promise<Playlist | null> {
+    const playlists = this.playlistsSubject.value;
+    return playlists.find(p => p.id === playlistId) || null;
+  }
+
+  async deletePlaylist(playlistId: string): Promise<void> {
+    try {
+      const playlists = this.playlistsSubject.value.filter(p => p.id !== playlistId);
+      this.playlistsSubject.next(playlists);
+      await this.savePlaylists(playlists);
+    } catch (error) {
+      console.error('Error deleting playlist:', error);
+      throw error;
+    }
+  }
+
+  async removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
+    try {
       const playlists = this.playlistsSubject.value;
-      let playlistsUpdated = false;
+      const playlist = playlists.find(p => p.id === playlistId);
       
-      for (const playlist of playlists) {
-        const trackIndex = playlist.trackIds.indexOf(id);
-        if (trackIndex >= 0) {
-          playlist.trackIds.splice(trackIndex, 1);
-          playlist.updatedAt = new Date().toISOString();
-          playlistsUpdated = true;
-        }
+      if (!playlist) {
+        throw new Error(`Playlist with ID ${playlistId} not found`);
       }
       
-      if (playlistsUpdated) {
-        this.playlistsSubject.next(playlists);
+      // Remove track if present in playlist
+      const trackIndex = playlist.trackIds.indexOf(trackId);
+      if (trackIndex !== -1) {
+        playlist.trackIds.splice(trackIndex, 1);
+        playlist.updatedAt = new Date().toISOString();
+        this.playlistsSubject.next([...playlists]);
+        await this.savePlaylists(playlists);
+      }
+    } catch (error) {
+      console.error('Error removing track from playlist:', error);
+      throw error;
+    }
+  }
+
+  async updatePlaylistDetails(playlistId: string, name: string, description?: string, coverArt?: string): Promise<Playlist> {
+    try {
+      const playlists = this.playlistsSubject.value;
+      const playlist = playlists.find(p => p.id === playlistId);
+      
+      if (!playlist) {
+        throw new Error(`Playlist with ID ${playlistId} not found`);
+      }
+      
+      // Update playlist details
+      playlist.name = name;
+      playlist.description = description;
+      if (coverArt) {
+        playlist.coverArt = coverArt;
+      }
+      playlist.updatedAt = new Date().toISOString();
+      
+      this.playlistsSubject.next([...playlists]);
+      await this.savePlaylists(playlists);
+      
+      return playlist;
+    } catch (error) {
+      console.error('Error updating playlist details:', error);
+      throw error;
+    }
+  }
+
+  async loadPlaylists(): Promise<void> {
+    try {
+      const playlists = await this.get('playlists') || [];
+      this.playlistsSubject.next(playlists);
+    } catch (error) {
+      console.error('Error loading playlists:', error);
+    }
+  }
+
+  async savePlaylists(playlists: Playlist[]): Promise<void> {
+    try {
+      await this.set('playlists', playlists);
+    } catch (error) {
+      console.error('Error saving playlists:', error);
+    }
+  }
+
+  async removeTrack(trackId: string): Promise<void> {
+    try {
+      // Remove from tracks list
+      const tracks = this.tracksSubject.value.filter(t => t.id !== trackId);
+      this.tracksSubject.next(tracks);
+      await this.saveTracks(tracks);
+      
+      // Remove from any playlists
+      const playlists = this.playlistsSubject.value;
+      let playlistsChanged = false;
+      
+      playlists.forEach(playlist => {
+        const initialLength = playlist.trackIds.length;
+        playlist.trackIds = playlist.trackIds.filter(id => id !== trackId);
+        
+        if (playlist.trackIds.length !== initialLength) {
+          playlist.updatedAt = new Date().toISOString();
+          playlistsChanged = true;
+        }
+      });
+      
+      if (playlistsChanged) {
+        this.playlistsSubject.next([...playlists]);
         await this.savePlaylists(playlists);
       }
     } catch (error) {
@@ -390,141 +515,27 @@ export class DataService {
     }
   }
 
-  // Playlist methods
-  async createPlaylist(name: string, description?: string): Promise<Playlist> {
-    const newPlaylist: Playlist = {
-      id: uuidv4(),
-      name,
-      description,
-      trackIds: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    const playlists = [...this.playlistsSubject.value, newPlaylist];
-    this.playlistsSubject.next(playlists);
-    await this.savePlaylists(playlists);
-    
-    return newPlaylist;
-  }
-
-  async getPlaylist(id: string): Promise<Playlist | null> {
-    return this.playlistsSubject.value.find(playlist => playlist.id === id) || null;
-  }
-
-  async getAllPlaylists(): Promise<Playlist[]> {
-    return this.playlistsSubject.value;
-  }
-
-  async addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
-    const playlists = this.playlistsSubject.value;
-    const playlist = playlists.find(p => p.id === playlistId);
-    
-    if (!playlist) {
-      throw new Error('Playlist not found');
-    }
-    
-    if (!playlist.trackIds.includes(trackId)) {
-      playlist.trackIds.push(trackId);
-      playlist.updatedAt = new Date().toISOString();
-      
-      this.playlistsSubject.next(playlists);
-      await this.savePlaylists(playlists);
-    }
-  }
-
-  async removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
-    const playlists = this.playlistsSubject.value;
-    const playlist = playlists.find(p => p.id === playlistId);
-    
-    if (!playlist) {
-      throw new Error('Playlist not found');
-    }
-    
-    const trackIndex = playlist.trackIds.indexOf(trackId);
-    if (trackIndex >= 0) {
-      playlist.trackIds.splice(trackIndex, 1);
-      playlist.updatedAt = new Date().toISOString();
-      
-      this.playlistsSubject.next(playlists);
-      await this.savePlaylists(playlists);
-    }
-  }
-
-  async deletePlaylist(playlistId: string): Promise<void> {
-    const playlists = this.playlistsSubject.value.filter(p => p.id !== playlistId);
-    this.playlistsSubject.next(playlists);
-    await this.savePlaylists(playlists);
-  }
-
-  async updatePlaylistDetails(playlistId: string, name: string, description?: string): Promise<void> {
-    const playlists = this.playlistsSubject.value;
-    const playlist = playlists.find(p => p.id === playlistId);
-    
-    if (!playlist) {
-      throw new Error('Playlist not found');
-    }
-    
-    playlist.name = name;
-    playlist.description = description;
-    playlist.updatedAt = new Date().toISOString();
-    
-    this.playlistsSubject.next(playlists);
-    await this.savePlaylists(playlists);
-  }
-
-  // Storage helpers
-  private async loadTracks(): Promise<void> {
+  // Storage methods for key-value pairs
+  async get(key: string): Promise<any> {
     try {
-      const { value } = await Preferences.get({ key: 'tracks' });
-      if (value) {
-        const tracks = JSON.parse(value) as Track[];
-        this.tracksSubject.next(tracks);
-      }
+      const { value } = await Preferences.get({ key });
+      return value ? JSON.parse(value) : null;
     } catch (error) {
-      console.error('Error loading tracks:', error);
-      // If there's an error, start with empty tracks
-      this.tracksSubject.next([]);
+      console.error(`Error getting ${key} from storage:`, error);
+      return null;
     }
-  }
-
-  private async saveTracks(tracks: Track[]): Promise<void> {
-    await Preferences.set({
-      key: 'tracks',
-      value: JSON.stringify(tracks)
-    });
-  }
-  private async loadPlaylists(): Promise<void> {
-    try {
-      const { value } = await Preferences.get({ key: 'playlists' });
-      if (value) {
-        const playlists = JSON.parse(value) as Playlist[];
-        this.playlistsSubject.next(playlists);
-      }
-    } catch (error) {
-      console.error('Error loading playlists:', error);
-      // If there's an error, start with empty playlists
-      this.playlistsSubject.next([]);
-    }
-  }
-
-  async savePlaylists(playlists: Playlist[]): Promise<void> {
-    await Preferences.set({
-      key: 'playlists',
-      value: JSON.stringify(playlists)
-    });
   }
 
   async set(key: string, value: any): Promise<void> {
-    await Preferences.set({
-      key,
-      value: JSON.stringify(value)
-    });
-  }
-
-  async get(key: string): Promise<any> {
-    const result = await Preferences.get({ key });
-    return result.value ? JSON.parse(result.value) : null;
+    try {
+      await Preferences.set({
+        key,
+        value: JSON.stringify(value)
+      });
+    } catch (error) {
+      console.error(`Error setting ${key} in storage:`, error);
+      throw error;
+    }
   }
 }
 

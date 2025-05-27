@@ -170,6 +170,9 @@ export class MediaPlayerService {
     this.currentTrack$.next(track);
     this.updatePlaybackState(); // Update state when track changes
 
+    // Add track to recently played when played
+    await this.dataService.addToRecentlyPlayed(track.id);
+
     try {
       if (track.isLocal) {
         const player = this.localAudioPlayer;
@@ -450,9 +453,7 @@ export class MediaPlayerService {
         const parts = rawTitle.split(' - ');
         trackArtist = parts[0].trim();
         trackTitle = parts[1].trim();
-      }
-
-      // Create track object
+      }      // Create track object
       const trackDuration = await this.getAudioDuration(file);
       const track: Track = {
         id: trackId,
@@ -460,7 +461,7 @@ export class MediaPlayerService {
         artist: trackArtist,
         album: trackArtist !== 'Unknown Artist' ? trackArtist : 'Local Music',
         duration: trackDuration,
-        imageUrl: 'assets/music-bg.png',
+        imageUrl: 'assets/placeholder-album.png',
         previewUrl: trackUri,
         spotifyId: '',
         liked: false,
@@ -469,7 +470,7 @@ export class MediaPlayerService {
         source: 'local',
         addedAt: new Date().toISOString(),
         type: trackFileExt,
-        artwork: 'assets/music-bg.png',
+        artwork: 'assets/placeholder-album.png',
         pathOrUrl: trackUri
       };
 
@@ -527,15 +528,6 @@ export class MediaPlayerService {
     if (tracks.length) {
       this.play(tracks[startIndex]);
     }
-  }
-
-  async toggleLike(track: Track): Promise<void> {
-    if (track.liked) {
-      await this.dataService.removeLiked(track.id);
-    } else {
-      await this.dataService.addLiked(track.id);
-    }
-    track.liked = !track.liked;
   }
 
   async clearCurrentTrack(): Promise<void> {

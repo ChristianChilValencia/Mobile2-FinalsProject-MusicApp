@@ -12,6 +12,7 @@ export interface Track {
   localPath?: string;
   source?: 'local' | 'stream';
   addedAt?: string;
+  lastPlayed?: string;
   type?: string;
   artwork?: string | null;
   pathOrUrl?: string;

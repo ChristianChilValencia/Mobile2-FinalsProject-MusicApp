@@ -105,8 +105,9 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }  private async refreshLocalMusic() {
     try {
-      // Get local tracks
-      const localTracks = await this.dataService.getLocalTracks();
+      // Get only local tracks
+      const allTracks = await this.dataService.getAllTracks();
+      const localTracks = allTracks.filter(track => track.source === 'local');
       
       // Sort by upload date (newest first)
       this.localMusic = localTracks.sort((a, b) => {

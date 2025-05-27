@@ -1,20 +1,14 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef} from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastController, LoadingController, Platform} from '@ionic/angular';
+import { ToastController, LoadingController, Platform } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { Track } from '../../services/data.service';
+import { Track as MainTrack } from '../../services/data.service';
 import { DataService as LocalDataService } from '../../local-services/data.service';
 import { ConfigService } from '../../local-services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { adaptLocalTrackToMainTrack } from '../../utils/track-adapter';
-
-interface UploadStatus {
-  file: File;
-  status: string;
-  progress: number;
-}
 
 @Component({
   selector: 'app-uploads',
@@ -23,29 +17,61 @@ interface UploadStatus {
   standalone: false
 })
 export class UploadsPage implements OnInit, OnDestroy {
-  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
 
-  recentlyAddedTracks: Track[] = [];
-  pendingUploads: UploadStatus[] = [];
+  // Local music state
+  localMusic: MainTrack[] = [];  isDarkMode = false;
   private settingsSub?: Subscription;
 
+  // Slider configuration
+  slideOpts = {
+    slidesPerView: 'auto',
+    spaceBetween: 20,
+    freeMode: true,
+    pagination: false
+  };
+
   constructor(
-    private audioService: MediaPlayerService,
+    public audioService: MediaPlayerService,
     private dataService: LocalDataService,
     private configService: ConfigService,
-    private router: Router,
+    public router: Router,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
     private platform: Platform
   ) {}
 
   async ngOnInit() {
+    // Settings subscription
+    this.settingsSub = this.configService.settings$.subscribe(s => {
+      this.isDarkMode = s.darkMode;
+      document.body.setAttribute('color-theme', s.darkMode ? 'dark' : 'light');
+    });
     await this.dataService.ensureInit();
-    await this.loadRecentlyAddedTracks();
+    await this.refreshLocalMusic();
   }
 
   ngOnDestroy() {
     this.settingsSub?.unsubscribe();
+  }
+
+  // Format time for display
+  formatTime(time: number | null): string {
+    if (time === null) return '0:00';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  }
+  private async refreshLocalMusic() {
+    try {
+      // Get local tracks and adapt them to the main app format
+      const localTracks = await this.dataService.getLocalTracks();
+      this.localMusic = localTracks.map(track => adaptLocalTrackToMainTrack(track));
+      return this.localMusic;
+    } catch (error) {
+      console.error('Error refreshing local music:', error);
+      throw error;
+    }
   }
 
   async requestAudioPermissions() {
@@ -58,10 +84,20 @@ export class UploadsPage implements OnInit, OnDestroy {
         return false;
       }
     }
-    return true;
+    return true; // In web, permissions work differently
   }
 
-  openFileSelector() {
+  async openFileSelector() {
+    const hasPermissions = await this.requestAudioPermissions();
+    if (!hasPermissions) {
+      const toast = await this.toastCtrl.create({
+        message: 'Permission denied to access files',
+        duration: 2000,
+        color: 'danger'
+      });
+      await toast.present();
+      return;
+    }
     this.fileInput.nativeElement.click();
   }
 
@@ -76,23 +112,14 @@ export class UploadsPage implements OnInit, OnDestroy {
     await loading.present();
 
     const results: { success: number; failed: number } = { success: 0, failed: 0 };
+    const successfulTracks: MainTrack[] = [];
 
     try {
       for (const file of files) {
-        const uploadStatus: UploadStatus = {
-          file,
-          status: 'Starting...',
-          progress: 0
-        };
-        this.pendingUploads.push(uploadStatus);
-        
         try {
-          // Use the MediaPlayerService to upload the file and get a track
           const track = await this.audioService.addLocalTrack(file);
           results.success++;
-          
-          // Add to recently added tracks
-          this.recentlyAddedTracks = [track, ...this.recentlyAddedTracks].slice(0, 10);
+          successfulTracks.push(track);
           
           // Only show success toast for single file uploads
           if (files.length === 1) {
@@ -119,9 +146,6 @@ export class UploadsPage implements OnInit, OnDestroy {
             });
             await errToast.present();
           }
-        } finally {
-          // Remove from pending uploads
-          this.pendingUploads = this.pendingUploads.filter(u => u.file !== file);
         }
       }
 
@@ -136,7 +160,13 @@ export class UploadsPage implements OnInit, OnDestroy {
         await summaryToast.present();
       }
 
-      await this.loadRecentlyAddedTracks();
+      // Refresh the local music list to show the new tracks
+      await this.refreshLocalMusic();
+
+      // If we have successful uploads and it was a single file, start playing it
+      if (successfulTracks.length === 1 && files.length === 1) {
+        this.playTrack(successfulTracks[0]);
+      }
 
     } catch (error) {
       console.error('Error in upload process:', error);
@@ -153,7 +183,7 @@ export class UploadsPage implements OnInit, OnDestroy {
     }
   }
 
-  async playTrack(track: Track) {
+  async playTrack(track: MainTrack) {
     try {
       await this.audioService.setQueue([track], 0);
       await this.router.navigate(['/player']);
@@ -165,19 +195,6 @@ export class UploadsPage implements OnInit, OnDestroy {
         color: 'danger'
       });
       await toast.present();
-    }
-  }
-
-  private async loadRecentlyAddedTracks() {
-    try {
-      const localTracks = await this.dataService.getLocalTracks();
-      // Convert local tracks to main track format
-      const tracks = localTracks.map(track => adaptLocalTrackToMainTrack(track));
-      this.recentlyAddedTracks = tracks
-        .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
-        .slice(0, 10);
-    } catch (error) {
-      console.error('Error loading recently added tracks:', error);
     }
   }
 }

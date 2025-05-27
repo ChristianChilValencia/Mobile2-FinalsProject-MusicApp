@@ -31,10 +31,6 @@ const routes: Routes = [
         loadChildren: () => import('../pages/player/player.module').then(m => m.PlayerPageModule)
       },
       {
-        path: 'local-home',
-        loadChildren: () => import('../pages/local-home/local-home.module').then(m => m.HomePageModule)
-      },
-      {
         path: '',
         redirectTo: '/tabs/home',
         pathMatch: 'full'

@@ -28,16 +28,6 @@ const routes: Routes = [
   },  {
     path: 'player',
     loadChildren: () => import('./pages/player/player.module').then( m => m.PlayerPageModule)
-  },  
-  {
-    path: 'local-home',
-    redirectTo: '/tabs/local-home',
-    pathMatch: 'full'
-  },
-  {
-    path: 'local-library',
-    redirectTo: '/tabs/local-library',
-    pathMatch: 'full'
   },
 ];
 @NgModule({

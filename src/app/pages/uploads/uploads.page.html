@@ -1,62 +1,70 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/library"></ion-back-button>
+      <ion-title>Upload Music</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="requestAudioPermissions(); openFileSelector()">
+        <ion-icon name="cloud-upload"></ion-icon>
+      </ion-button>
     </ion-buttons>
-    <ion-title>Upload Music</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <div class="upload-container">
-    <div class="upload-section">
-      <h2>Add Local Audio Files</h2>
-      <p>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</p>
-      
-      <!-- Hidden file input -->
-      <input type="file" #fileInput style="display:none" 
-             accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.opus" 
-             multiple (change)="onFileSelected($event)">
-      
-      <div class="upload-area" (click)="requestAudioPermissions(); openFileSelector()">
-        <ion-icon name="cloud-upload"></ion-icon>
-        <p>Tap to select files or drag and drop</p>
-      </div>
-    </div>
+<ion-content [fullscreen]="true" [class.dark-mode]="isDarkMode" class="ion-padding-bottom">
+  <!-- Hidden file input -->
+  <input type="file" #fileInput style="display:none" 
+         accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.opus" 
+         multiple (change)="onFileSelected($event)">
+
+  <!-- Upload Section -->
+  <ion-card class="upload-section">
+    <ion-card-header>
+      <ion-card-title>Add Local Audio Files</ion-card-title>
+      <ion-card-subtitle>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</ion-card-subtitle>
+    </ion-card-header>
     
-    <div class="recently-added-section" *ngIf="recentlyAddedTracks.length > 0">
-      <h2>Recently Added</h2>
-      
-      <div class="horizontal-scroll-container">
-        <div *ngFor="let track of recentlyAddedTracks" 
-             class="music-card" 
-             (click)="playTrack(track)">
-          <div class="album-art-container">
-            <img [src]="track.imageUrl || 'assets/music-bg.png'" 
-                 [alt]="track.title" 
-                 class="album-art">
+    <ion-card-content>
+      <ion-button expand="block" (click)="requestAudioPermissions(); openFileSelector()" class="upload-area">
+        <ion-icon slot="start" name="cloud-upload"></ion-icon>
+        Tap to select files
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Local Music Section -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Your Music</ion-card-title>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ion-grid *ngIf="localMusic.length === 0" class="empty-state">
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" class="ion-text-center">
+            <ion-icon name="musical-notes" size="large"></ion-icon>
+            <h3>No local music found</h3>
+            <p>Upload music files to get started</p>
+            <ion-button fill="clear" (click)="requestAudioPermissions(); openFileSelector()">
+              <ion-icon name="add" slot="start"></ion-icon>
+              Add Files
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>      <swiper-container [options]="slideOpts" *ngIf="localMusic.length > 0">
+        <swiper-slide *ngFor="let track of localMusic">
+          <ion-card class="music-card" (click)="playTrack(track)">
+            <img [src]="track.imageUrl || 'assets/music-bg.png'" [alt]="track.title">
+            <ion-card-header>
+              <ion-card-title>{{track.title}}</ion-card-title>
+              <ion-card-subtitle>{{track.artist}}</ion-card-subtitle>
+            </ion-card-header>
             <div class="play-overlay">
               <ion-icon name="play"></ion-icon>
             </div>
-          </div>
-          <div class="track-info">
-            <h3 class="track-title">{{track.title}}</h3>
-            <p class="track-artist">{{track.artist}}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="uploads-pending" *ngIf="pendingUploads.length > 0">
-      <h2>Uploading Files</h2>
-      
-      <div class="upload-item" *ngFor="let upload of pendingUploads">
-        <div class="upload-details">
-          <div class="filename">{{ upload.file.name }}</div>
-          <div class="status">{{ upload.status }}</div>
-        </div>
-        <ion-progress-bar [value]="upload.progress"></ion-progress-bar>
-      </div>
-    </div>
-  </div>
+          </ion-card>
+        </swiper-slide>
+      </swiper-container>
+    </ion-card-content>
+  </ion-card>
 </ion-content>
+
+<!-- Removed mini-player from local-home since we're using the global mini-player component in tabs.page.html -->

@@ -9,22 +9,44 @@ import { Component } from '@angular/core';
 export class TabsPage {
 
   constructor() {}
-
   private lastClickTime: number = 0;
-  private readonly doubleClickDelay: number = 300; // Milliseconds between clicks to be considered a double click
+  private readonly doubleClickDelay: number = 200;
+  private longPressTimer: any;
+  private readonly longPressDelay: number = 500;
 
   handleSearchTabClick($event: Event): void {
     const currentTime = new Date().getTime();
     
     if (currentTime - this.lastClickTime < this.doubleClickDelay) {
-      // Double click detected
-      // Focus on the search input to open keyboard on mobile
-      const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
-      if (searchInput) {
-        searchInput.focus();
-      }
+      this.focusSearchInput();
+      this.vibrate(50);
     }
     
     this.lastClickTime = currentTime;
+
+    this.longPressTimer = setTimeout(() => {
+      this.focusSearchInput();
+      this.vibrate(100);
+    }, this.longPressDelay);
+
+    document.addEventListener('touchend', this.clearLongPressTimer, { once: true });
+    document.addEventListener('touchcancel', this.clearLongPressTimer, { once: true });
+  }
+
+  private focusSearchInput(): void {
+    const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.focus();
+    }
+  }
+
+  private clearLongPressTimer = (): void => {
+    clearTimeout(this.longPressTimer);
+  }
+
+  private vibrate(duration: number): void {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(duration);
+    }
   }
 }

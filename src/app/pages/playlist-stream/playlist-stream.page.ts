@@ -295,12 +295,11 @@ export class PlaylistStreamPage implements OnInit {
       return `${minutes} min`;
     }
   }
-
   private async showToast(message: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message,
       duration: 2000,
-      position: 'bottom',
+      position: 'top',
       color
     });
     

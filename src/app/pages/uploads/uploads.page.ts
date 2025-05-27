@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastController, LoadingController, Platform } from '@ionic/angular';
+import { ToastController, LoadingController, Platform, ActionSheetController } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { Track } from '../../models/track.model';
 import { DataService as LocalDataService } from '../../services/data.service';
@@ -36,7 +36,8 @@ export class UploadsPage implements OnInit, OnDestroy {
     public router: Router,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
-    private platform: Platform
+    private platform: Platform,
+    private actionSheetCtrl: ActionSheetController
   ) {}
   async ngOnInit() {
     // Settings subscription
@@ -116,11 +117,10 @@ export class UploadsPage implements OnInit, OnDestroy {
           successfulTracks.push(track);
           
           // Only show success toast for single file uploads
-          if (files.length === 1) {
-            const okToast = await this.toastCtrl.create({
+          if (files.length === 1) {            const okToast = await this.toastCtrl.create({
               message: `"${track.title}" uploaded successfully!`,
               duration: 1500,
-              position: 'bottom',
+              position: 'top',
               color: 'success'
             });
             await okToast.present();
@@ -131,11 +131,10 @@ export class UploadsPage implements OnInit, OnDestroy {
           
           // Show detailed error for single file uploads
           if (files.length === 1) {
-            const errMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-            const errToast = await this.toastCtrl.create({
+            const errMessage = error instanceof Error ? error.message : 'Unknown error occurred';            const errToast = await this.toastCtrl.create({
               message: `Error uploading ${file.name}: ${errMessage}`,
               duration: 3000,
-              position: 'bottom',
+              position: 'top',
               color: 'danger'
             });
             await errToast.present();
@@ -144,11 +143,10 @@ export class UploadsPage implements OnInit, OnDestroy {
       }
 
       // Show summary toast for multiple files
-      if (files.length > 1) {
-        const summaryToast = await this.toastCtrl.create({
+      if (files.length > 1) {        const summaryToast = await this.toastCtrl.create({
           message: `Upload complete: ${results.success} succeeded, ${results.failed} failed`,
           duration: 3000,
-          position: 'bottom',
+          position: 'top',
           color: results.failed ? 'warning' : 'success'
         });
         await summaryToast.present();
@@ -190,5 +188,46 @@ export class UploadsPage implements OnInit, OnDestroy {
       });
       await toast.present();
     }
+  }
+
+  async presentActionSheet() {
+    const buttons = [
+      {
+        text: 'Search Music',
+        icon: 'search',
+        handler: () => {
+          this.router.navigateByUrl('/tabs/search');
+          return true;
+        }
+      },
+      {
+        text: 'Your Library',
+        icon: 'library',
+        handler: () => {
+          this.router.navigateByUrl('/tabs/library');
+          return true;
+        }
+      },
+      {
+        text: 'Home',
+        icon: 'home',
+        handler: () => {
+          this.router.navigateByUrl('/tabs/home');
+          return true;
+        }
+      },
+      {
+        text: 'Cancel',
+        icon: 'close',
+        role: 'cancel'
+      }
+    ];
+    
+    const actionSheet = await this.actionSheetCtrl.create({
+      header: 'Options',
+      buttons
+    });
+    
+    await actionSheet.present();
   }
 }

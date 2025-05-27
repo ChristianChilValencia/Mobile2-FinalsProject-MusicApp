@@ -78,8 +78,7 @@
           Search Music
         </ion-button>
       </div>
-      
-      <ion-list *ngIf="filteredTracks.length > 0">
+        <ion-list *ngIf="filteredTracks.length > 0">
         <ion-item-sliding *ngFor="let track of filteredTracks">
           <ion-item button detail="false" (click)="playTrack(track)">
             <ion-thumbnail slot="start">
@@ -90,15 +89,20 @@
               <h3>{{ track.artist }}</h3>
               <p *ngIf="track.album">{{ track.album }}</p>
             </ion-label>
-            <ion-note slot="end" *ngIf="track.duration">
+            <div class="track-actions">
+              <ion-button fill="clear" (click)="playTrack(track); $event.stopPropagation()">
+                <ion-icon slot="icon-only" name="play"></ion-icon>
+              </ion-button>
+              <ion-button fill="clear" (click)="addToPlaylist(track); $event.stopPropagation()">
+                <ion-icon slot="icon-only" name="add"></ion-icon>
+              </ion-button>
+            </div>
+            <!-- <ion-note slot="end" *ngIf="track.duration">
               {{ formatDuration(track.duration) }}
-            </ion-note>
+            </ion-note> -->
           </ion-item>
           
           <ion-item-options side="end">
-            <ion-item-option color="primary" (click)="addToPlaylist(track)">
-              <ion-icon slot="icon-only" name="add"></ion-icon>
-            </ion-item-option>
             <ion-item-option color="danger" (click)="deleteTrack(track)">
               <ion-icon slot="icon-only" name="trash"></ion-icon>
             </ion-item-option>

@@ -71,15 +71,30 @@ export class MediaPlayerService {
     audio.crossOrigin = 'anonymous';
     audio.volume = 1.0;
   }
-
   private setupAudioEvents() {
     this.audioPlayer.addEventListener('loadedmetadata', () => {
-      this.duration$.next(this.audioPlayer.duration);
+      // For streamed songs, cap at 30 seconds
+      if (!this.currentTrack$.getValue()?.isLocal) {
+        this.duration$.next(30); // Cap at 30 seconds for streamed tracks
+      } else {
+        this.duration$.next(this.audioPlayer.duration);
+      }
       this._trackReady = true;
     });
 
     this.audioPlayer.addEventListener('timeupdate', () => {
-      this.currentTime$.next(this.audioPlayer.currentTime);
+      const currentTrack = this.currentTrack$.getValue();
+      if (currentTrack && !currentTrack.isLocal && this.audioPlayer.currentTime > 30) {
+        // For streamed tracks, enforce 30 second limit
+        this.audioPlayer.pause();
+        this.isPlaying$.next(false);
+        this.currentTime$.next(30);
+        this.stopUpdates();
+        // Move to next track if available
+        this.next();
+      } else {
+        this.currentTime$.next(this.audioPlayer.currentTime);
+      }
     });
 
     this.audioPlayer.addEventListener('play', () => {
@@ -94,9 +109,8 @@ export class MediaPlayerService {
 
     this.audioPlayer.addEventListener('ended', () => {
       this.next();
-    });
-
-    this.localAudioPlayer.addEventListener('loadedmetadata', () => {
+    });    this.localAudioPlayer.addEventListener('loadedmetadata', () => {
+      // For local files, use the actual duration
       this.duration$.next(this.localAudioPlayer.duration);
       this._trackReady = true;
     });
@@ -138,8 +152,7 @@ export class MediaPlayerService {
   private getCurrentPlayer(): HTMLAudioElement {
     const track = this.currentTrack$.getValue();
     return track?.isLocal ? this.localAudioPlayer : this.audioPlayer;
-  }
-  async play(track?: Track): Promise<void> {
+  }  async play(track?: Track): Promise<void> {
     if (!track) {
       // Resume current track
       const currentTrack = this.currentTrack$.value;
@@ -198,10 +211,12 @@ export class MediaPlayerService {
           }
         }
       } else {
+        // For streamed tracks, cap at 30 seconds
         this.audioPlayer.src = track.previewUrl;
-        this.audioPlayer.load();      await this.audioPlayer.play();
-      this.isPlaying$.next(true);
-      this.updatePlaybackState();
+        this.audioPlayer.load();
+        await this.audioPlayer.play();
+        this.isPlaying$.next(true);
+        this.updatePlaybackState();
       }
     } catch (e) {
       console.error('Playback failed:', e);

@@ -381,12 +381,11 @@ export class LibraryPage implements OnInit {
     });
     
     await alert.present();
-  }
-  private async showToast(message: string, color: string = 'success') {
+  }  private async showToast(message: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message,
       duration: 2000,
-      position: 'bottom',
+      position: 'top',
       color
     });
     

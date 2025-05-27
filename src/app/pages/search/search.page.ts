@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActionSheetController, ToastController } from '@ionic/angular';
+import { ActionSheetController, ToastController, NavController } from '@ionic/angular';
 import { DeezerService } from '../../services/deezer.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService } from '../../services/data.service';
@@ -18,13 +18,13 @@ export class SearchPage implements OnInit {
   isLoading = false;
   errorMessage = '';
   playlists: Playlist[] = [];
-
   constructor(
     private deezerService: DeezerService,
     private mediaPlayerService: MediaPlayerService,
     private dataService: DataService,
     private actionSheetController: ActionSheetController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private navCtrl: NavController
   ) {}
 
   ngOnInit() {
@@ -125,21 +125,19 @@ export class SearchPage implements OnInit {
       
       // Then add it to the playlist
       await this.dataService.addTrackToPlaylist(playlistId, track.id);
-      
-      const toast = await this.toastController.create({
+        const toast = await this.toastController.create({
         message: `Added to playlist`,
         duration: 2000,
-        position: 'bottom'
+        position: 'top'
       });
       
       await toast.present();
     } catch (error) {
       console.error('Error adding to playlist:', error);
-      
-      const toast = await this.toastController.create({
+        const toast = await this.toastController.create({
         message: 'Failed to add to playlist',
         duration: 2000,
-        position: 'bottom',
+        position: 'top',
         color: 'danger'
       });
       
@@ -159,25 +157,67 @@ export class SearchPage implements OnInit {
       const filePath = track.pathOrUrl || track.previewUrl;
       await this.dataService.saveLocalMusic(track, filePath);
       await this.dataService.addTrackToPlaylist(playlist.id, track.id);
-      
-      const toast = await this.toastController.create({
+        const toast = await this.toastController.create({
         message: `Created new playlist: ${newPlaylistName}`,
         duration: 2000,
-        position: 'bottom'
+        position: 'top'
       });
       
       await toast.present();
     } catch (error) {
       console.error('Error creating playlist:', error);
-      
-      const toast = await this.toastController.create({
+        const toast = await this.toastController.create({
         message: 'Failed to create playlist',
         duration: 2000,
-        position: 'bottom',
+        position: 'top',
         color: 'danger'
       });
       
       await toast.present();
     }
+  }
+
+  async presentActionSheet() {
+    const buttons = [
+      {
+        text: 'Upload Music',
+        icon: 'cloud-upload',
+        handler: () => {
+          this.navigateToPage('/tabs/uploads');
+          return true;
+        }
+      },
+      {
+        text: 'Your Library',
+        icon: 'library',
+        handler: () => {
+          this.navigateToPage('/tabs/library');
+          return true;
+        }
+      },
+      {
+        text: 'Home',
+        icon: 'home',
+        handler: () => {
+          this.navigateToPage('/tabs/home');
+          return true;
+        }
+      },
+      {
+        text: 'Cancel',
+        icon: 'close',
+        role: 'cancel'
+      }
+    ];
+    
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Options',
+      buttons
+    });
+    
+    await actionSheet.present();
+  }
+    navigateToPage(page: string) {
+    this.navCtrl.navigateForward(page);
   }
 }

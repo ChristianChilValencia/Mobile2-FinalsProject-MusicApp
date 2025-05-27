@@ -25,13 +25,17 @@
   height: min(280px, 80vw); /* Keep it square */
   max-height: 35vh; /* Limit height on smaller screens */
   max-width: 35vh;
-  border-radius: 12px;
+  border-radius: 50%; /* Make it circular */
   box-shadow: 0 15px 35px rgba(0,0,0,.5);
   overflow: hidden;
   transition: transform var(--speed);
 }
 .cover-art.rotate {
   animation: rotate 30s linear infinite;
+  animation-play-state: running;
+}
+.cover-art:not(.rotate) {
+  animation-play-state: paused;
 }
 @keyframes rotate {
   from { transform: rotate(0deg); }
@@ -41,7 +45,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 50%; /* Match parent's circular shape */
 }
 .track-info-container {
   width: 100%;

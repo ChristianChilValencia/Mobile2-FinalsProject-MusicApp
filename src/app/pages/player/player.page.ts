@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ActionSheetController, ToastController, NavController } from '@ionic/angular';
+import { ActionSheetController, ToastController, NavController, AlertController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService, PlaybackState, Track, RepeatMode } from '../../services/data.service';
@@ -33,13 +33,13 @@ export class PlayerPage implements OnInit, OnDestroy {
   // Add missing properties
   seekValue: number = 0;
   volumeValue: number = 1;
-  isShuffleActive: boolean = false;
-  constructor(
+  isShuffleActive: boolean = false;  constructor(
     private mediaPlayerService: MediaPlayerService,
     private dataService: DataService,
     private actionSheetController: ActionSheetController,
     private toastController: ToastController,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private alertController: AlertController
   ) {}
 
   ngOnInit() {    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
@@ -167,29 +167,53 @@ export class PlayerPage implements OnInit, OnDestroy {
   async addToPlaylist(track: Track) {
     const playlists = await this.dataService.getAllPlaylists();
     
-    if (playlists.length === 0) {
-      this.showToast('You don\'t have any playlists yet. Create one in the Library tab.');
-      return;
-    }
+    // Always show the action sheet, even if there are no playlists
+    const buttons = [];
     
-    const buttons = playlists.map(playlist => {
-      return {
-        text: playlist.name,
-        handler: () => {
-          this.dataService.addTrackToPlaylist(playlist.id, track.id)
-            .then(() => this.showToast(`Added to ${playlist.name}`))
-            .catch(err => this.showToast('Failed to add to playlist', 'danger'));
-          return true;
-        }
-      };
-    });
-    
-    // Add create new playlist option
-    buttons.unshift({
+    // Add create new playlist option at the top
+    buttons.push({
       text: 'Create New Playlist',
       handler: () => {
-        // TODO: Implement create playlist with track
-        this.showToast('Create playlist not implemented yet');
+        setTimeout(() => {
+          this.createNewPlaylistWithTrack(track);
+        }, 100);
+        return true;
+      }
+    });
+    
+    // Add existing playlists
+    if (playlists.length > 0) {
+      playlists.forEach(playlist => {
+        buttons.push({
+          text: playlist.name,
+          handler: () => {
+            this.dataService.addTrackToPlaylist(playlist.id, track.id)
+              .then(() => this.showToast(`Added to ${playlist.name}`))
+              .catch(err => this.showToast('Failed to add to playlist', 'danger'));
+            return true;
+          }
+        });
+      });
+    }
+    
+    // Add "Create Artist Mix" option
+    buttons.push({
+      text: 'Create Artist Mix',
+      handler: () => {
+        const artistName = track.artist || 'Unknown Artist';
+        const mixName = `${artistName}'s Mix`;
+        
+        this.dataService.createPlaylist(mixName)
+          .then(playlist => {
+            return this.dataService.addTrackToPlaylist(playlist.id, track.id)
+              .then(() => {
+                this.showToast(`Created "${mixName}" with this track`);
+              });
+          })
+          .catch(err => {
+            console.error('Error creating mix:', err);
+            this.showToast('Failed to create mix', 'danger');
+          });
         return true;
       }
     });
@@ -208,8 +232,7 @@ export class PlayerPage implements OnInit, OnDestroy {
     });
     
     await actionSheet.present();
-  }
-  /**
+  }  /**
    * Skip forward 5 seconds
    */
   skipForward() {
@@ -269,15 +292,63 @@ export class PlayerPage implements OnInit, OnDestroy {
       this.showToast('No track is currently playing', 'warning');
     }
   }
-
   private async showToast(message: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message,
       duration: 2000,
-      position: 'bottom',
+      position: 'top',
       color
     });
     
     await toast.present();
+  }  /**
+   * Create a new playlist with the current track
+   */
+  async createNewPlaylistWithTrack(track: Track) {
+    const alert = await this.alertController.create({
+      header: 'Create New Playlist',
+      inputs: [
+        {
+          name: 'name',
+          type: 'text',
+          placeholder: 'Enter playlist name'
+        },
+        {
+          name: 'description',
+          type: 'text',
+          placeholder: 'Description (optional)'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'Create',
+          handler: (data: {name: string, description?: string}) => {
+            if (!data.name || data.name.trim() === '') {
+              this.showToast('Please enter a playlist name', 'warning');
+              return false;
+            }
+            
+            this.dataService.createPlaylist(data.name.trim(), data.description?.trim())
+              .then(playlist => {
+                return this.dataService.addTrackToPlaylist(playlist.id, track.id)
+                  .then(() => {
+                    this.showToast(`Added to ${playlist.name}`);
+                  });
+              })
+              .catch(error => {
+                console.error('Error creating playlist:', error);
+                this.showToast('Failed to create playlist', 'danger');
+              });
+            return true;
+          }
+        }
+      ]
+    });
+    
+    await alert.present();
   }
 }

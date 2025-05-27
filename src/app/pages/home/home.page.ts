@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { NavController } from '@ionic/angular';
+import { NavController, ActionSheetController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { DataService, Track, Playlist } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
@@ -17,11 +17,11 @@ export class HomePage implements OnInit, OnDestroy {
   
   private tracksSubscription: Subscription | null = null;
   private playlistsSubscription: Subscription | null = null;
-
   constructor(
     private dataService: DataService,
     private mediaPlayerService: MediaPlayerService,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private actionSheetController: ActionSheetController
   ) {}
 
   ngOnInit() {
@@ -79,5 +79,55 @@ export class HomePage implements OnInit, OnDestroy {
   getFirstTrackArtwork(playlist: Playlist): string {
     const firstTrack = this.recentlyPlayed.find(track => track.id === playlist.trackIds[0]);
     return firstTrack?.artwork || firstTrack?.imageUrl || 'assets/placeholder-playlist.png';
+  }
+  
+  async presentActionSheet() {
+    const buttons = [
+      {
+        text: 'Upload Music',
+        icon: 'cloud-upload',
+        handler: () => {
+          this.navigateToUploads();
+          return true;
+        }
+      },
+      {
+        text: 'Search Music',
+        icon: 'search',
+        handler: () => {
+          this.navigateToSearch();
+          return true;
+        }
+      },
+      {
+        text: 'Your Library',
+        icon: 'library',
+        handler: () => {
+          this.navCtrl.navigateForward('/tabs/library');
+          return true;
+        }
+      },
+      {
+        text: 'Create Playlist',
+        icon: 'add-circle',
+        handler: () => {
+          this.navCtrl.navigateForward('/tabs/library');
+          // We'll need to implement this properly with the DataService
+          return true;
+        }
+      },
+      {
+        text: 'Cancel',
+        icon: 'close',
+        role: 'cancel'
+      }
+    ];
+    
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Options',
+      buttons
+    });
+    
+    await actionSheet.present();
   }
 }

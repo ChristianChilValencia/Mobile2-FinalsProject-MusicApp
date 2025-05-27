@@ -335,11 +335,25 @@ export class MediaPlayerService {
   }
 
   async addLocalTrack(file: File): Promise<Track> {
-    try {
-      // Validate file
-      const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac', 'audio/opus', 'audio/m4a'];
-      if (!validTypes.includes(file.type)) {
-        throw new Error(`Invalid file type: ${file.type}. Supported types: MP3, WAV, OGG, AAC, FLAC, OPUS, M4A`);
+    try {      // Validate file
+      const validTypes = [
+        'audio/mpeg', 'audio/mp3',  // MP3
+        'audio/wav', 'audio/x-wav',  // WAV
+        'audio/ogg', 'audio/vorbis',  // OGG
+        'audio/aac', 'audio/x-m4a', 'audio/mp4', 'audio/m4a',  // AAC/M4A
+        'audio/flac', 'audio/x-flac',  // FLAC
+        'audio/opus'  // OPUS
+      ];
+      // Check if the MIME type or its variants are supported
+      const isValidType = validTypes.some(type => file.type.toLowerCase() === type.toLowerCase());
+      if (!isValidType) {
+        console.warn(`Attempting to handle file type: ${file.type}`);
+        // Try to validate by extension as fallback
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        const validExtensions = ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac', 'opus'];
+        if (!ext || !validExtensions.includes(ext)) {
+          throw new Error(`Invalid file type: ${file.type}. Supported types: MP3, WAV, OGG, AAC, FLAC, OPUS, M4A`);
+        }
       }
 
       // Check file size (max 50MB)
@@ -357,8 +371,21 @@ export class MediaPlayerService {
 
       if (this.platform.is('hybrid')) {
         // Convert file to base64
-        const fileArrayBuffer = await file.arrayBuffer();
-        const base64Data = this.arrayBufferToBase64(fileArrayBuffer);
+        let fileArrayBuffer: ArrayBuffer;
+        try {
+          fileArrayBuffer = await file.arrayBuffer();
+        } catch (error) {
+          console.error('Error reading file:', error);
+          throw new Error('Failed to read audio file. Please try again.');
+        }
+        
+        let base64Data: string;
+        try {
+          base64Data = this.arrayBufferToBase64(fileArrayBuffer);
+        } catch (error) {
+          console.error('Error converting file to base64:', error);
+          throw new Error('Failed to process audio file. Please try again.');
+        }
 
         try {
           // Ensure music directory exists
@@ -371,7 +398,8 @@ export class MediaPlayerService {
           // Ignore if directory already exists
           const err = error as { message?: string };
           if (err.message && !err.message.includes('exists')) {
-            throw error;
+            console.error('Error creating music directory:', error);
+            throw new Error('Failed to create storage directory. Please check app permissions.');
           }
         }
 

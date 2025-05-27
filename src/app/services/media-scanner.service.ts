@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Filesystem, Directory, FilesystemDirectory } from '@capacitor/filesystem';
 import { Platform } from '@ionic/angular';
 import { Track } from '../models/track.model';
-import { DataService } from '../local-services/data.service';
+import { DataService } from './data.service';
 
 @Injectable({
   providedIn: 'root'

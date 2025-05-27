@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { StorageService } from './storage.service';
 import { v4 as uuidv4 } from 'uuid';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 import {
   CapacitorSQLite,
@@ -72,32 +72,88 @@ export class DataService {
       try {
         await this.platform.ready();
         
-        // Initialize SQLite for hybrid (mobile) platforms
+        // Initialize SQLite
         if (this.platform.is('hybrid')) {
           await this.sqlite.checkConnectionsConsistency();
           this.db = await this.sqlite.createConnection('harmony.db', false, 'no-encryption', 1, false);
-          await this.db.open();
+        } else {
+          await this.sqlite.initWebStore();
+          this.db = await this.sqlite.createConnection('harmony.db', false, 'no-encryption', 1, false);
+        }
+        await this.db.open();
 
-          const sql = `
-            CREATE TABLE IF NOT EXISTS local_tracks (
-              id           TEXT PRIMARY KEY,
-              title        TEXT,
-              artist       TEXT,
-              album        TEXT,
-              duration     INTEGER,
-              image_url    TEXT,
-              preview_url  TEXT,
-              spotify_id   TEXT,
-              liked        INTEGER DEFAULT 0,
-              is_local     INTEGER DEFAULT 1,
-              source       TEXT CHECK(source IN ('local', 'stream')) DEFAULT 'local',
-              local_path   TEXT
-            );`;
+        const sql = `
+          CREATE TABLE IF NOT EXISTS playlists (
+            id           TEXT PRIMARY KEY,
+            name         TEXT NOT NULL,
+            description  TEXT,
+            cover_art    TEXT,
+            created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+          );
 
-          await this.db.execute(sql);
+          CREATE TRIGGER IF NOT EXISTS trg_playlists_updated
+            AFTER UPDATE OF name, description, cover_art ON playlists
+          BEGIN
+            UPDATE playlists SET updated_at = datetime('now') WHERE id = NEW.id;
+          END;
+
+          CREATE TABLE IF NOT EXISTS playlist_tracks (
+            playlist_id  TEXT NOT NULL,
+            track_id     TEXT NOT NULL,
+            position     INTEGER,
+            PRIMARY KEY (playlist_id, track_id)
+          );
+
+          CREATE TABLE IF NOT EXISTS tracks (
+            id           TEXT PRIMARY KEY,
+            title        TEXT,
+            artist       TEXT,
+            album        TEXT,
+            duration     INTEGER,
+            image_url    TEXT,
+            preview_url  TEXT,
+            spotify_id   TEXT,
+            liked        INTEGER DEFAULT 0,
+            is_local     INTEGER DEFAULT 0,
+            source       TEXT CHECK(source IN ('local', 'stream')) DEFAULT 'stream'
+          );
+
+          CREATE TABLE IF NOT EXISTS liked_music (
+            track_id     TEXT PRIMARY KEY,
+            liked_at     TEXT NOT NULL DEFAULT (datetime('now'))
+          );
+
+          CREATE TABLE IF NOT EXISTS downloaded_music (
+            track_id     TEXT PRIMARY KEY,
+            file_uri     TEXT NOT NULL,
+            file_path    TEXT NOT NULL,
+            downloaded_at TEXT NOT NULL DEFAULT (datetime('now'))
+          );`;
+
+        await this.db.execute(sql);
+        
+        // Load local tracks from SQLite
+        if (this.platform.is('hybrid')) {
+          const result = await this.db.query(`
+            SELECT
+              t.id,
+              t.title,
+              t.artist,
+              t.album,
+              t.duration,
+              t.image_url    AS imageUrl,
+              t.preview_url  AS previewUrl,
+              t.spotify_id   AS spotifyId,
+              t.liked,
+              t.is_local     AS isLocal,
+              t.source,
+              dm.file_path   AS localPath
+            FROM tracks t
+            LEFT JOIN downloaded_music dm ON dm.track_id = t.id
+            WHERE t.is_local = 1
+          `);
           
-          // Load local tracks from SQLite
-          const result = await this.db.query(`SELECT * FROM local_tracks`);
           if (result.values) {
             const localTracks = result.values.map(row => ({
               id: row.id,
@@ -105,17 +161,18 @@ export class DataService {
               artist: row.artist,
               album: row.album,
               duration: row.duration,
-              imageUrl: row.image_url,
-              previewUrl: row.preview_url,
-              spotifyId: row.spotify_id,
+              imageUrl: row.imageUrl,
+              previewUrl: row.previewUrl,
+              spotifyId: row.spotifyId,
               liked: !!row.liked,
-              isLocal: true,              source: 'local' as const,
-              localPath: row.local_path
+              isLocal: true,
+              source: row.source as 'local' | 'stream',
+              localPath: row.localPath
             }));
             
             // Merge local tracks with existing tracks
             const currentTracks = this.tracksSubject.value;
-            const mergedTracks = [...currentTracks.filter(t => t.source !== 'local'), ...localTracks] as Track[];
+            const mergedTracks = [...currentTracks.filter(t => !t.isLocal), ...localTracks];
             this.tracksSubject.next(mergedTracks);
           }
         }
@@ -131,10 +188,11 @@ export class DataService {
   // Track methods
   async saveLocalMusic(track: Track, filePath: string): Promise<void> {
     try {
-      const tracks = this.tracksSubject.value;      const localTrack: Track = {
+      const tracks = this.tracksSubject.value;      
+      const localTrack: Track = {
         ...track,
         isLocal: true,
-        source: 'local' as const,
+        source: 'local',
         localPath: filePath
       };
 
@@ -149,17 +207,19 @@ export class DataService {
       // Update in-memory state
       this.tracksSubject.next(tracks);
       
-      // Save to Preferences
+      // Save to Preferences for web/desktop
       await this.saveTracks(tracks);
       
-      // If on mobile, also save to SQLite
+      // Save to SQLite
       if (this.platform.is('hybrid')) {
         await this.ensureInit();
+        
+        // Save track data
         await this.db.run(
-          `INSERT OR REPLACE INTO local_tracks (
+          `INSERT OR REPLACE INTO tracks (
             id, title, artist, album, duration,
             image_url, preview_url, spotify_id,
-            liked, source, local_path
+            liked, is_local, source
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
           [
             localTrack.id,
@@ -171,13 +231,81 @@ export class DataService {
             localTrack.previewUrl,
             localTrack.spotifyId,
             localTrack.liked ? 1 : 0,
-            localTrack.source,
-            localTrack.localPath
+            1,
+            'local'
+          ]
+        );
+        
+        // Save file path
+        await this.db.run(
+          `INSERT OR REPLACE INTO downloaded_music (
+            track_id, file_uri, file_path, downloaded_at
+          ) VALUES (?, ?, ?, ?);`,
+          [
+            localTrack.id,
+            localTrack.previewUrl || '',
+            filePath,
+            new Date().toISOString()
           ]
         );
       }
     } catch (error) {
       console.error('Error saving local music:', error);
+      throw error;
+    }
+  }
+
+  async addLiked(trackId: string): Promise<void> {
+    try {
+      const tracks = this.tracksSubject.value;
+      const track = tracks.find(t => t.id === trackId);
+      if (!track) return;
+
+      track.liked = true;
+      this.tracksSubject.next(tracks);
+      await this.saveTracks(tracks);
+
+      if (this.platform.is('hybrid')) {
+        await this.ensureInit();
+        const now = new Date().toISOString();
+        await this.db.run(
+          `INSERT OR IGNORE INTO liked_music (track_id, liked_at) VALUES (?, ?);`,
+          [trackId, now]
+        );
+        await this.db.run(
+          `UPDATE tracks SET liked = 1 WHERE id = ?;`,
+          [trackId]
+        );
+      }
+    } catch (error) {
+      console.error('Error adding liked track:', error);
+      throw error;
+    }
+  }
+
+  async removeLiked(trackId: string): Promise<void> {
+    try {
+      const tracks = this.tracksSubject.value;
+      const track = tracks.find(t => t.id === trackId);
+      if (!track) return;
+
+      track.liked = false;
+      this.tracksSubject.next(tracks);
+      await this.saveTracks(tracks);
+
+      if (this.platform.is('hybrid')) {
+        await this.ensureInit();
+        await this.db.run(
+          `DELETE FROM liked_music WHERE track_id = ?;`,
+          [trackId]
+        );
+        await this.db.run(
+          `UPDATE tracks SET liked = 0 WHERE id = ?;`,
+          [trackId]
+        );
+      }
+    } catch (error) {
+      console.error('Error removing liked track:', error);
       throw error;
     }
   }
@@ -205,14 +333,36 @@ export class DataService {
       const track = tracks.find(t => t.id === id);
       
       if (track && track.source === 'local' && track.localPath) {
-        // Delete the actual file
-        await this.storageService.deleteFile(track.localPath);
+        // Delete the actual file for local tracks
+        try {
+          if (track.previewUrl?.startsWith('blob:')) {
+            console.log('Blob URL will be garbage collected:', track.previewUrl);
+          }
+          else if (track.previewUrl?.startsWith('file://')) {
+            const path = track.previewUrl.replace(/^file:\/\//, '');
+            await Filesystem.deleteFile({
+              path,
+              directory: Directory.Data
+            });
+          }
+        } catch (fileError) {
+          console.warn('Error deleting file:', fileError);
+        }
       }
       
       // Update tracks array
       const updatedTracks = tracks.filter(t => t.id !== id);
       this.tracksSubject.next(updatedTracks);
       await this.saveTracks(updatedTracks);
+      
+      // Remove from SQLite tables on mobile
+      if (this.platform.is('hybrid')) {
+        await this.ensureInit();
+        await this.db.run('DELETE FROM tracks WHERE id = ?', [id]);
+        await this.db.run('DELETE FROM liked_music WHERE track_id = ?', [id]);
+        await this.db.run('DELETE FROM downloaded_music WHERE track_id = ?', [id]);
+        await this.db.run('DELETE FROM playlist_tracks WHERE track_id = ?', [id]);
+      }
       
       // Remove track from playlists
       const playlists = this.playlistsSubject.value;
@@ -360,6 +510,18 @@ export class DataService {
       key: 'playlists',
       value: JSON.stringify(playlists)
     });
+  }
+
+  async set(key: string, value: any): Promise<void> {
+    await Preferences.set({
+      key,
+      value: JSON.stringify(value)
+    });
+  }
+
+  async get(key: string): Promise<any> {
+    const result = await Preferences.get({ key });
+    return result.value ? JSON.parse(result.value) : null;
   }
 }
 

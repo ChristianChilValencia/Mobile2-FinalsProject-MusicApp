@@ -2,20 +2,15 @@
   <ion-toolbar>
       <ion-title>Upload Music</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="requestAudioPermissions(); openFileSelector()">
-        <ion-icon name="cloud-upload"></ion-icon>
-      </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" [class.dark-mode]="isDarkMode" class="ion-padding-bottom">
-  <!-- Hidden file input -->
   <input type="file" #fileInput style="display:none" 
          accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.opus" 
          multiple (change)="onFileSelected($event)">
 
-  <!-- Upload Section -->
   <ion-card class="upload-section">
     <ion-card-header>
       <ion-card-title>Add Local Audio Files</ion-card-title>
@@ -28,10 +23,7 @@
         Tap to select files
       </ion-button>
     </ion-card-content>
-  </ion-card>
-
-  <!-- Local Music Section -->
-  <ion-card>
+    
     <ion-card-header>
       <ion-card-title>Your Music</ion-card-title>
     </ion-card-header>
@@ -43,10 +35,6 @@
             <ion-icon name="musical-notes" size="large"></ion-icon>
             <h3>No local music found</h3>
             <p>Upload music files to get started</p>
-            <ion-button fill="clear" (click)="requestAudioPermissions(); openFileSelector()">
-              <ion-icon name="add" slot="start"></ion-icon>
-              Add Files
-            </ion-button>
           </ion-col>
         </ion-row>
       </ion-grid>      <swiper-container [options]="slideOpts" *ngIf="localMusic.length > 0">

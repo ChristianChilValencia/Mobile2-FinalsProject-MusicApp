@@ -25,17 +25,12 @@ export class HomePage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Subscribe to tracks updates
     this.tracksSubscription = this.dataService.tracks$.subscribe(tracks => {
-      // For simplicity, just show the first 10 tracks as "recently played"
-      // In a real app, you would track play history
       this.recentlyPlayed = tracks.slice(0, 10);
       
-      // Filter based on current mode
       this.modeChanged();
     });
     
-    // Subscribe to playlists updates
     this.playlistsSubscription = this.dataService.playlists$.subscribe(playlists => {
       this.playlists = playlists;
     });
@@ -60,8 +55,12 @@ export class HomePage implements OnInit, OnDestroy {
       this.recentlyPlayed = this.recentlyPlayed.filter(track => track.source === 'stream');
     }
   }
-
   playTrack(track: Track) {
+    this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== track.id);
+    this.recentlyPlayed.unshift(track);
+    if (this.recentlyPlayed.length > 10) {
+      this.recentlyPlayed.pop();
+    }
     this.mediaPlayerService.setQueue([track], 0);
   }
 
@@ -74,5 +73,11 @@ export class HomePage implements OnInit, OnDestroy {
 
   navigateToSearch() {
     this.navCtrl.navigateForward('/tabs/search');
+  }
+  // No need for reversedRecentlyPlayed getter since we want newest first
+
+  getFirstTrackArtwork(playlist: Playlist): string {
+    const firstTrack = this.recentlyPlayed.find(track => track.id === playlist.trackIds[0]);
+    return firstTrack?.artwork || firstTrack?.imageUrl || 'assets/placeholder-playlist.png';
   }
 }

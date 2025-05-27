@@ -15,9 +15,9 @@
 <ion-content [fullscreen]="true">
   <div class="playlist-container">
     <!-- Playlist header -->
-    <div class="playlist-header" *ngIf="playlist">
+     <div class="playlist-header" *ngIf="playlist">
       <div class="playlist-cover">
-        <img [src]="playlist.coverArt || 'assets/placeholder-playlist.png'" alt="Playlist Cover">
+        <img [src]="playlist.coverArt || (playlistTracks.length > 0 ? (playlistTracks[0].artwork || playlistTracks[0].imageUrl) : 'assets/placeholder-playlist.png')" alt="Playlist Cover">
       </div>
       <div class="playlist-info">
         <h1>{{ playlist.name }}</h1>
@@ -50,9 +50,11 @@
     
     <!-- Tracks list -->
     <ion-list *ngIf="playlistTracks.length > 0">
-      <ion-reorder-group [disabled]="!isReordering" (ionItemReorder)="handleReorder($event)">
-        <ion-item-sliding *ngFor="let track of playlistTracks; let i = index">
+      <ion-reorder-group [disabled]="!isReordering" (ionItemReorder)="handleReorder($event)">        <ion-item-sliding *ngFor="let track of playlistTracks; let i = index">
           <ion-item button detail="false" (click)="playTrack(track, i)">
+            <ion-thumbnail slot="start">
+              <img [src]="track.artwork || track.imageUrl || 'assets/placeholder-album.png'" [alt]="track.title">
+            </ion-thumbnail>
             <ion-label>
               <h2>{{ track.title }}</h2>
               <h3>{{ track.artist }}</h3>

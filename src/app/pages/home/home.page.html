@@ -7,8 +7,8 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <div class="content-container">    <!-- Recently played section -->
+<ion-content [fullscreen]="true">  <div class="content-container">
+    <!-- Recently played section -->
     <section class="music-section" *ngIf="recentlyPlayed && recentlyPlayed.length > 0">
       <h2>Recently Played</h2>
       <div class="horizontal-scroll">
@@ -30,10 +30,10 @@
     <!-- Your playlists section -->
     <section class="music-section" *ngIf="playlists && playlists.length > 0">
       <h2>Your Playlists</h2>
-      <div class="horizontal-scroll">
+      <div class="playlists-grid">
         <div class="playlist-card" *ngFor="let playlist of playlists" (click)="openPlaylist(playlist)">
           <div class="playlist-art">
-            <img [src]="playlist.coverArt || 'assets/placeholder-playlist.png'" alt="Playlist Art">
+            <img [src]="playlist.coverArt || getFirstTrackArtwork(playlist)" alt="Playlist Art">
           </div>
           <div class="playlist-info">
             <div class="title">{{ playlist.name }}</div>

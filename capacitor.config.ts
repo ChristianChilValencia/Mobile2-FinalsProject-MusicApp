@@ -4,6 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.vibeflow.app',
   appName: 'VibeFlow',
   webDir: 'www',
+  
   plugins: {
     SplashScreen: {
       launchShowDuration: 3000,

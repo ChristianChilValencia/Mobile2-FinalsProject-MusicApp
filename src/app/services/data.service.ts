@@ -47,6 +47,9 @@ export enum RepeatMode {
   providedIn: 'root'
 })
 export class DataService {
+  getPlaylistCoverArt(playlist: Playlist): string | PromiseLike<string | null> | null {
+    throw new Error('Method not implemented.');
+  }
   private tracksSubject = new BehaviorSubject<Track[]>([]);
   private playlistsSubject = new BehaviorSubject<Playlist[]>([]);
   private sqlite: SQLiteConnection;

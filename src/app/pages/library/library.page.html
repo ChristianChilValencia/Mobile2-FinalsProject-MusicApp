@@ -20,23 +20,17 @@
         <ion-label>Songs</ion-label>
       </ion-segment-button>
     </ion-segment>
-    
-    <!-- Playlists view -->
-    <div *ngIf="selectedSegment === 'playlists'">
+      <!-- Playlists view -->
+    <div *ngIf="selectedSegment === 'playlists'">   
       <div class="empty-state" *ngIf="playlists.length === 0">
         <ion-icon name="musical-notes"></ion-icon>
         <h3>No Playlists Yet</h3>
-        <p>Create your first playlist by tapping the + button below</p>
-        <ion-button expand="block" (click)="createPlaylist()">
-          <ion-icon slot="start" name="add"></ion-icon>
-          Create Playlist
-        </ion-button>
       </div>
-      
+
       <ion-list *ngIf="playlists.length > 0">
         <ion-item *ngFor="let playlist of playlists" button detail (click)="openPlaylist(playlist)">
           <ion-thumbnail slot="start">
-            <img [src]="playlist.coverArt || 'assets/placeholder-playlist.png'" alt="Playlist">
+            <img [src]="playlist.coverArt || playlistArtwork[playlist.id] || 'assets/placeholder-playlist.png'" alt="Playlist">
           </ion-thumbnail>
           <ion-label>
             <h2>{{ playlist.name }}</h2>

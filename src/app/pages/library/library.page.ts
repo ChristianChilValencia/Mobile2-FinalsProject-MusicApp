@@ -9,7 +9,17 @@ import { MediaPlayerService } from '../../services/media-player.service';
   styleUrls: ['./library.page.scss'],
   standalone: false
 })
-export class LibraryPage implements OnInit {  tracks: Track[] = [];
+export class LibraryPage implements OnInit {
+  playlistArtwork: { [key: string]: string } = {};
+  
+  private async loadPlaylistArtwork(playlist: Playlist) {
+    if (playlist.trackIds.length > 0) {
+      const firstTrack = await this.dataService.getTrack(playlist.trackIds[0]);
+      if (firstTrack) {
+        this.playlistArtwork[playlist.id] = firstTrack.artwork || firstTrack.imageUrl || 'assets/placeholder-playlist.png';
+      }
+    }
+  }tracks: Track[] = [];
   playlists: Playlist[] = [];
   filteredTracks: Track[] = [];
   selectedSegment: string = 'songs';
@@ -44,7 +54,6 @@ export class LibraryPage implements OnInit {  tracks: Track[] = [];
     // Refresh data each time the page is shown
     this.loadData();
   }
-
   async loadData() {
     this.isLoading = true;
     
@@ -56,6 +65,10 @@ export class LibraryPage implements OnInit {  tracks: Track[] = [];
       
       this.tracks = tracks;
       this.playlists = playlists;
+      
+      // Load artwork for all playlists
+      await Promise.all(playlists.map(playlist => this.loadPlaylistArtwork(playlist)));
+      
       this.applyFilter();
     } catch (error) {
       console.error('Error loading library data:', error);

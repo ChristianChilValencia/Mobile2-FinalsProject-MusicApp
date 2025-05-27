@@ -10,12 +10,11 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./library.page.scss'],
   standalone: false
 })
-export class LibraryPage implements OnInit, OnDestroy {
-  playlistArtwork: { [key: string]: string } = {};
+export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key: string]: string } = {};
   tracks: Track[] = [];
   playlists: Playlist[] = [];
   filteredTracks: Track[] = [];
-  selectedSegment: string = 'songs';
+  selectedSegment: string = 'playlists';
   isLoading: boolean = true;
   sourceFilter: string = 'all';
   currentPlaybackState: PlaybackState | null = null;

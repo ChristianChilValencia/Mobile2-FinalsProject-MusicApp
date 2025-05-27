@@ -2,13 +2,7 @@
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/tabs/library"></ion-back-button>
-    </ion-buttons>
-    <ion-title>{{ playlist?.name || 'Playlist' }}</ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="presentActionSheet()">
-        <ion-icon slot="icon-only" name="ellipsis-vertical"></ion-icon>
-      </ion-button>
-    </ion-buttons>
+    </ion-buttons>    <ion-title>{{ playlist?.name || 'Playlist' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -42,7 +36,7 @@
       <ion-icon name="musical-notes"></ion-icon>
       <h3>No Tracks in Playlist</h3>
       <p>Add tracks from your library or by searching for music</p>
-      <ion-button expand="block" (click)="navigateToSearch()">
+      <ion-button fill="clear" expand="block" (click)="navigateToSearch()">
         <ion-icon slot="start" name="search"></ion-icon>
         Search Music
       </ion-button>

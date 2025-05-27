@@ -1,5 +1,4 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
+<ion-header [translucent]="true">  <ion-toolbar>
     <ion-title>Your Library</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="presentActionSheet()">
@@ -17,7 +16,7 @@
         <ion-label>Playlists</ion-label>
       </ion-segment-button>
       <ion-segment-button value="songs">
-        <ion-label>Songs</ion-label>
+        <ion-label>History</ion-label>
       </ion-segment-button>
     </ion-segment>
       <!-- Playlists view -->
@@ -25,6 +24,7 @@
       <div class="empty-state" *ngIf="playlists.length === 0">
         <ion-icon name="musical-notes"></ion-icon>
         <h3>No Playlists Yet</h3>
+        <p *ngIf="sourceFilter === 'all'">Start by adding music to your library</p>
       </div>
 
       <ion-list *ngIf="playlists.length > 0">
@@ -37,9 +37,8 @@
             <p>{{ playlist.trackIds.length }} {{ playlist.trackIds.length === 1 ? 'track' : 'tracks' }}</p>
           </ion-label>
         </ion-item>
-      </ion-list>
-      
-      <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="playlists.length > 0">
+      </ion-list>       
+      <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="selectedSegment === 'playlists'" style="bottom: 80px;">
         <ion-fab-button (click)="createPlaylist()">
           <ion-icon name="add"></ion-icon>
         </ion-fab-button>
@@ -53,7 +52,7 @@
         </ion-chip>
         <ion-chip [color]="sourceFilter === 'local' ? 'primary' : 'medium'" (click)="filterBySource('local')">
           <ion-icon name="phone-portrait"></ion-icon>
-          <ion-label>Local Uploads</ion-label>
+          <ion-label>Local</ion-label>
         </ion-chip>
         <ion-chip [color]="sourceFilter === 'stream' ? 'primary' : 'medium'" (click)="filterBySource('stream')">
           <ion-icon name="cloud"></ion-icon>
@@ -67,13 +66,13 @@
         <p *ngIf="sourceFilter === 'local'">Add local music from the upload page</p>
         <p *ngIf="sourceFilter === 'stream'">Search for streaming music on the search page</p>
         <p *ngIf="sourceFilter === 'all'">Start by adding music to your library</p>
-          <ion-button *ngIf="sourceFilter === 'local'" expand="block" (click)="navigateToUploads()">
+          <ion-button fill="clear" *ngIf="sourceFilter === 'local'" expand="block" (click)="navigateToUploads()">
           <ion-icon slot="start" name="cloud-upload"></ion-icon>
           Upload Music
         </ion-button>
         
-        <ion-button *ngIf="sourceFilter === 'stream'" expand="block" (click)="navigateToSearch()">
-          <ion-icon slot="start" name="search"></ion-icon>
+        <ion-button fill="clear" *ngIf="sourceFilter === 'stream'" expand="block" (click)="navigateToSearch()">
+          <ion-icon slot="start" name="search" fill="clear"></ion-icon>
           Search Music
         </ion-button>
       </div>

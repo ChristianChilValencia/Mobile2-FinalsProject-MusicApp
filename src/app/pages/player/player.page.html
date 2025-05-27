@@ -18,15 +18,18 @@
       </div>
     </div>
       <!-- Track Info Section -->
-    <div class="track-info-container">
-      <div class="track-info">
+    <div class="track-info-container">      <div class="track-info">
         <h1 class="title">{{ playbackState.currentTrack?.title || 'No Track Playing' }}</h1>
-        <h2 class="artist">{{ playbackState.currentTrack?.artist || 'Unknown Artist' }}</h2>
-        <h3 class="album" *ngIf="playbackState.currentTrack?.album">{{ playbackState.currentTrack?.album }}</h3>
+        <div class="track-details">
+          <div class="track-metadata">
+            <h2 class="artist">{{ playbackState.currentTrack?.artist || 'Unknown Artist' }}</h2>
+            <h3 class="album" *ngIf="playbackState.currentTrack?.album">{{ playbackState.currentTrack?.album }}</h3>
+          </div>
+          <ion-button fill="clear" class="add-playlist-button" (click)="addCurrentTrackToPlaylist()" *ngIf="playbackState.currentTrack">
+            <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
+          </ion-button>
+        </div>
       </div>
-      <ion-button fill="clear" class="add-playlist-button" (click)="addCurrentTrackToPlaylist()" *ngIf="playbackState.currentTrack">
-        <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
-      </ion-button>
     </div>
       <!-- Seek Bar Section -->
     <div class="seek-controls">

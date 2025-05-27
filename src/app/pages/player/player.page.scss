@@ -59,8 +59,19 @@
 .track-info {
   flex: 1;
   text-align: left;
-  margin-right: 16px;
   min-width: 0; /* Allow text truncation to work */
+  
+  .track-details {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-top: 8px;
+    
+    .track-metadata {
+      flex: 1;
+      min-width: 0; /* Allow text truncation */
+    }
+  }
 }
 
 .add-playlist-button {
@@ -68,9 +79,11 @@
   --padding-start: 8px;
   --padding-end: 8px;
   margin: 0;
+  height: 36px;
+  margin-left: 12px;
   
   ion-icon {
-    font-size: 24px;
+    font-size: 20px;
   }
 }
 .title {

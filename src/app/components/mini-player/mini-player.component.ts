@@ -59,9 +59,14 @@ export class MiniPlayerComponent implements OnInit, OnDestroy {
   openPlayerPage() {
     this.navCtrl.navigateForward('/tabs/player');
   }
-
   onSeekChange(event: any) {
+    if (!this.playbackState?.currentTrack) return;
+    
     const newPosition = event.detail.value;
-    this.mediaPlayerService.seek(newPosition);
+    const duration = this.playbackState.duration || 0;
+    
+    // Ensure the position is within the track duration
+    const limitedPosition = Math.min(newPosition, duration);
+    this.mediaPlayerService.seek(limitedPosition);
   }
 }

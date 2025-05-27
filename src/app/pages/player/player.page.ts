@@ -3,24 +3,12 @@ import { ActionSheetController, ToastController, NavController, AlertController 
 import { Subscription } from 'rxjs';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService, PlaybackState, Track, RepeatMode } from '../../services/data.service';
-import { trigger, state, style, animate, transition } from '@angular/animations';
 
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
-  standalone: false,
-  animations: [
-    trigger('fadeInOut', [
-      transition(':enter', [
-        style({ opacity: 0 }),
-        animate('300ms', style({ opacity: 1 }))
-      ]),
-      transition(':leave', [
-        animate('300ms', style({ opacity: 0 }))
-      ])
-    ])
-  ]
+  standalone: false
 })
 export class PlayerPage implements OnInit, OnDestroy {
   playbackState: PlaybackState | null = null;

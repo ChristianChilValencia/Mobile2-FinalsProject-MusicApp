@@ -3,8 +3,8 @@ import { Router } from '@angular/router';
 import { ToastController, LoadingController, Platform } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { Track } from '../../models/track.model';
-import { DataService as LocalDataService } from '../../local-services/data.service';
-import { ConfigService } from '../../local-services/config.service';
+import { DataService as LocalDataService } from '../../services/data.service';
+import { ConfigService, AppSettings } from '../../services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -38,12 +38,11 @@ export class UploadsPage implements OnInit, OnDestroy {
     private loadingCtrl: LoadingController,
     private platform: Platform
   ) {}
-
   async ngOnInit() {
     // Settings subscription
-    this.settingsSub = this.configService.settings$.subscribe(s => {
-      this.isDarkMode = s.darkMode;
-      document.body.setAttribute('color-theme', s.darkMode ? 'dark' : 'light');
+    this.settingsSub = this.configService.settings$.subscribe((settings: AppSettings) => {
+      this.isDarkMode = settings.darkMode;
+      document.body.setAttribute('color-theme', settings.darkMode ? 'dark' : 'light');
     });
     await this.dataService.ensureInit();
     await this.refreshLocalMusic();

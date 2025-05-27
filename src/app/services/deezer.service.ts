@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Track } from './data.service';
+import { Track } from '../models/track.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({

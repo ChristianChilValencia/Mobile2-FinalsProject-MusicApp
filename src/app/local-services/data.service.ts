@@ -5,7 +5,7 @@ import {
   SQLiteConnection,
   SQLiteDBConnection
 } from '@capacitor-community/sqlite';
-import { Track } from './media-player.service';
+import { Track } from '../models/track.model';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
 @Injectable({ providedIn: 'root' })

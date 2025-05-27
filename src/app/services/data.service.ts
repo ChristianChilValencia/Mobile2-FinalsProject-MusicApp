@@ -4,25 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 
-// Define Track and Playlist interfaces directly in the service
-export interface Track {
-  id: string;
-  title: string;
-  artist: string;
-  album: string;
-  duration: number;
-  imageUrl: string;
-  previewUrl: string;
-  spotifyId: string;
-  liked: boolean;
-  isLocal: boolean;
-  localPath?: string;
-  source: 'local' | 'stream';
-  addedAt: string;
-  type?: string;
-  artwork?: string | null;
-  pathOrUrl?: string;
-}
+// Import and re-export Track interface from shared models
+import { Track } from '../models/track.model';
+export { Track } from '../models/track.model';
 
 export interface Playlist {
   id: string;

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Filesystem, Directory, FilesystemDirectory } from '@capacitor/filesystem';
 import { Platform } from '@ionic/angular';
-import { Track } from './media-player.service';
+import { Track } from '../models/track.model';
 import { DataService } from './data.service';
 
 @Injectable({

@@ -42,8 +42,7 @@ export class PlayerPage implements OnInit, OnDestroy {
     private navCtrl: NavController
   ) {}
 
-  ngOnInit() {
-    this.playbackSubscription = this.mediaPlayerService.playbackState$.subscribe(state => {
+  ngOnInit() {    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
       this.playbackState = state;
     });
   }

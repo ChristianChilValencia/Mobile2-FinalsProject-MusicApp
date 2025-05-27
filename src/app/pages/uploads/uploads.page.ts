@@ -2,13 +2,12 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { Router } from '@angular/router';
 import { ToastController, LoadingController, Platform } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { Track as MainTrack } from '../../services/data.service';
+import { Track } from '../../models/track.model';
 import { DataService as LocalDataService } from '../../local-services/data.service';
 import { ConfigService } from '../../local-services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
-import { adaptLocalTrackToMainTrack } from '../../utils/track-adapter';
 
 @Component({
   selector: 'app-uploads',
@@ -18,9 +17,8 @@ import { adaptLocalTrackToMainTrack } from '../../utils/track-adapter';
 })
 export class UploadsPage implements OnInit, OnDestroy {
   @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
-
   // Local music state
-  localMusic: MainTrack[] = [];  isDarkMode = false;
+  localMusic: Track[] = [];  isDarkMode = false;
   private settingsSub?: Subscription;
 
   // Slider configuration
@@ -63,10 +61,9 @@ export class UploadsPage implements OnInit, OnDestroy {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }
   private async refreshLocalMusic() {
-    try {
-      // Get local tracks and adapt them to the main app format
+    try {      // Get local tracks
       const localTracks = await this.dataService.getLocalTracks();
-      this.localMusic = localTracks.map(track => adaptLocalTrackToMainTrack(track));
+      this.localMusic = localTracks;
       return this.localMusic;
     } catch (error) {
       console.error('Error refreshing local music:', error);
@@ -109,10 +106,8 @@ export class UploadsPage implements OnInit, OnDestroy {
     const loading = await this.loadingCtrl.create({ 
       message: files.length > 1 ? `Uploading ${files.length} files...` : 'Uploading file...',
     });
-    await loading.present();
-
-    const results: { success: number; failed: number } = { success: 0, failed: 0 };
-    const successfulTracks: MainTrack[] = [];
+    await loading.present();    const results: { success: number; failed: number } = { success: 0, failed: 0 };
+    const successfulTracks: Track[] = [];
 
     try {
       for (const file of files) {
@@ -183,7 +178,7 @@ export class UploadsPage implements OnInit, OnDestroy {
     }
   }
 
-  async playTrack(track: MainTrack) {
+  async playTrack(track: Track) {
     try {
       await this.audioService.setQueue([track], 0);
       await this.router.navigate(['/player']);

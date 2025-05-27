@@ -163,20 +163,40 @@ export class PlayerPage implements OnInit, OnDestroy {
     await actionSheet.present();
   }  /**
    * Add a specified track to playlist
-   */
-  async addToPlaylist(track: Track) {
+   */  async addToPlaylist(track: Track) {
     const playlists = await this.dataService.getAllPlaylists();
     
     // Always show the action sheet, even if there are no playlists
     const buttons = [];
     
-    // Add create new playlist option at the top
+    // Add create playlist and artist mix options at the top
     buttons.push({
-      text: 'Create New Playlist',
+      text: 'Create Playlist',
       handler: () => {
         setTimeout(() => {
           this.createNewPlaylistWithTrack(track);
         }, 100);
+        return true;
+      }
+    });
+    
+    buttons.push({
+      text: `Create ${track.artist}'s Mix`,
+      handler: () => {
+        const artistName = track.artist || 'My';
+        const mixName = `${artistName}'s Mix`;
+        
+        this.dataService.createPlaylist(mixName)
+          .then(playlist => {
+            return this.dataService.addTrackToPlaylist(playlist.id, track.id)
+              .then(() => {
+                this.showToast(`Created "${mixName}" with this track`);
+              });
+          })
+          .catch(err => {
+            console.error('Error creating mix:', err);
+            this.showToast('Failed to create mix', 'danger');
+          });
         return true;
       }
     });
@@ -196,28 +216,6 @@ export class PlayerPage implements OnInit, OnDestroy {
       });
     }
     
-    // Add "Create Artist Mix" option
-    buttons.push({
-      text: 'Create Artist Mix',
-      handler: () => {
-        const artistName = track.artist || 'Unknown Artist';
-        const mixName = `${artistName}'s Mix`;
-        
-        this.dataService.createPlaylist(mixName)
-          .then(playlist => {
-            return this.dataService.addTrackToPlaylist(playlist.id, track.id)
-              .then(() => {
-                this.showToast(`Created "${mixName}" with this track`);
-              });
-          })
-          .catch(err => {
-            console.error('Error creating mix:', err);
-            this.showToast('Failed to create mix', 'danger');
-          });
-        return true;
-      }
-    });
-    
     // Add cancel button
     buttons.push({
       text: 'Cancel',
@@ -236,7 +234,7 @@ export class PlayerPage implements OnInit, OnDestroy {
    * Skip forward 5 seconds
    */
   skipForward() {
-    if (this.playbackState && this.playbackState.currentTime !== undefined) {
+    if (this.playbackState && this.playbackState.currentTrack) {
       const newPosition = Math.min(
         this.playbackState.currentTime + 5,
         this.playbackState.duration || 0
@@ -249,7 +247,7 @@ export class PlayerPage implements OnInit, OnDestroy {
    * Skip backward 5 seconds
    */
   skipBackward() {
-    if (this.playbackState && this.playbackState.currentTime !== undefined) {
+    if (this.playbackState && this.playbackState.currentTrack) {
       const newPosition = Math.max(this.playbackState.currentTime - 5, 0);
       this.mediaPlayerService.seek(newPosition);
     }

@@ -47,10 +47,10 @@
           <h2>{{ track.title }}</h2>
           <h3>{{ track.artist }}</h3>
           <p *ngIf="track.album">{{ track.album }}</p>
-        </ion-label>
+        </ion-label>        
         <div class="item-actions" slot="end">
-          <ion-button fill="clear" (click)="playTrack(track); $event.stopPropagation()">
-            <ion-icon slot="icon-only" name="play"></ion-icon>
+          <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
+            <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
           </ion-button>
           <ion-button fill="clear" (click)="showAddToPlaylistOptions(track); $event.stopPropagation()">
             <ion-icon slot="icon-only" name="add"></ion-icon>

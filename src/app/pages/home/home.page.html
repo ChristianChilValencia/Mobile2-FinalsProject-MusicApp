@@ -15,13 +15,12 @@
 <ion-content [fullscreen]="true">  <div class="content-container">
     <!-- Recently played section -->
     <section class="music-section" *ngIf="recentlyPlayed && recentlyPlayed.length > 0">
-      <h2>Recently Played</h2>
-      <div class="horizontal-scroll">
+      <h2>Recently Played</h2>      <div class="horizontal-scroll">
         <div class="track-card" *ngFor="let track of recentlyPlayed" (click)="playTrack(track)">
           <div class="album-art">
-            <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+            <img [src]="track.artwork || track.imageUrl || 'assets/placeholder-album.png'" alt="Album Art">
             <div class="play-overlay">
-              <ion-icon name="play"></ion-icon>
+              <ion-icon [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
             </div>
           </div>
           <div class="track-info">

@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ActionSheetController, AlertController, NavController, ToastController } from '@ionic/angular';
 import { DataService, Track, Playlist } from '../../services/data.service';
-import { MediaPlayerService } from '../../services/media-player.service';
+import { MediaPlayerService, PlaybackState } from '../../services/media-player.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-playlist-stream',
@@ -10,11 +11,12 @@ import { MediaPlayerService } from '../../services/media-player.service';
   styleUrls: ['./playlist-stream.page.scss'],
   standalone: false
 })
-export class PlaylistStreamPage implements OnInit {
-  playlist: Playlist | null = null;
+export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playlist | null = null;
   playlistTracks: Track[] = [];
   isReordering = false;
   playlistId: string | null = null;
+  currentPlaybackState: PlaybackState | null = null;
+  private playbackSubscription: Subscription | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -33,6 +35,15 @@ export class PlaylistStreamPage implements OnInit {
       await this.loadPlaylist(this.playlistId);
     } else {
       this.navController.navigateBack('/tabs/library');
+    }    // Subscribe to playback state changes
+    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
+      this.currentPlaybackState = state;
+    });
+  }
+  ngOnDestroy() {
+    // Unsubscribe from playback state changes
+    if (this.playbackSubscription) {
+      this.playbackSubscription.unsubscribe();
     }
   }
 
@@ -293,6 +304,179 @@ export class PlaylistStreamPage implements OnInit {
       return `${hours} hr ${minutes} min`;
     } else {
       return `${minutes} min`;
+    }
+  }
+
+  // Check if a track is currently playing
+  isCurrentlyPlaying(track: Track): boolean {
+    if (!this.currentPlaybackState) return false;
+    
+    return (
+      this.currentPlaybackState.isPlaying && 
+      this.currentPlaybackState.currentTrack?.id === track.id
+    );
+  }
+  
+  // Toggle play/pause for a track
+  togglePlayTrack(track: Track): void {
+    if (!this.currentPlaybackState) return;
+    
+    if (this.currentPlaybackState.currentTrack?.id === track.id) {
+      // The track is already the current track, toggle play/pause
+      this.mediaPlayerService.togglePlay();
+    } else {
+      // Get the index of the track in the playlist
+      const index = this.playlistTracks.findIndex(t => t.id === track.id);
+      if (index !== -1) {
+        // Start playing from this track in the playlist
+        this.playTrack(track, index);
+      }
+    }
+  }
+
+  // Show options to add track to another playlist
+  async showAddToPlaylistOptions(track: Track) {
+    // Get all playlists except the current one
+    const allPlaylists = await this.dataService.getAllPlaylists();
+    const playlists = allPlaylists.filter(p => p.id !== this.playlistId);
+    
+    const buttons = [];
+    
+    // Add create options
+    buttons.push({
+      text: 'Create Playlist',
+      handler: () => {
+        this.createCustomPlaylist(track);
+        return true;
+      }
+    });
+    
+    buttons.push({
+      text: `Create ${track.artist}'s Mix`,
+      handler: () => {
+        this.createArtistMix(track);
+        return true;
+      }
+    });
+    
+    // Add existing playlists
+    if (playlists.length > 0) {
+      playlists.forEach(playlist => {
+        buttons.push({
+          text: playlist.name,
+          handler: () => {
+            this.addTrackToPlaylist(track, playlist.id);
+            return true;
+          }
+        });
+      });
+    }
+    
+    // Add cancel button
+    buttons.push({
+      text: 'Cancel',
+      role: 'cancel',
+      handler: () => {
+        return true;
+      }
+    });
+    
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Add to Playlist',
+      buttons
+    });
+    
+    await actionSheet.present();
+  }
+
+  // Create a custom playlist with a track
+  async createCustomPlaylist(track: Track) {
+    const alert = await this.alertController.create({
+      header: 'New Playlist',
+      inputs: [
+        {
+          name: 'name',
+          type: 'text',
+          placeholder: 'Enter playlist name'
+        },
+        {
+          name: 'description',
+          type: 'text',
+          placeholder: 'Description (optional)'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'Create',
+          handler: async (data) => {
+            if (!data.name || data.name.trim() === '') {
+              this.showToast('Please enter a playlist name', 'warning');
+              return false;
+            }
+            
+            try {
+              // Create the playlist with custom name
+              const playlist = await this.dataService.createPlaylist(data.name, data.description);
+              
+              // Add the track to the playlist
+              await this.dataService.addTrackToPlaylist(playlist.id, track.id);
+              
+              this.showToast(`Created playlist: ${data.name}`);
+              return true;
+            } catch (error) {
+              console.error('Error creating playlist:', error);
+              this.showToast('Failed to create playlist', 'danger');
+              return false;
+            }
+          }
+        }
+      ]
+    });
+    
+    await alert.present();
+  }
+
+  // Create an artist mix playlist
+  async createArtistMix(track: Track) {
+    try {
+      const artistName = track.artist || 'My';
+      const mixName = `${artistName}'s Mix`;
+      
+      // Create the playlist
+      const playlist = await this.dataService.createPlaylist(mixName);
+      
+      // Add the track to the playlist
+      await this.dataService.addTrackToPlaylist(playlist.id, track.id);
+      
+      this.showToast(`Created artist mix: ${mixName}`);
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating artist mix:', error);
+      this.showToast('Failed to create artist mix', 'danger');
+      return false;
+    }
+  }
+
+  // Add track to an existing playlist
+  async addTrackToPlaylist(track: Track, playlistId: string) {
+    try {
+      await this.dataService.addTrackToPlaylist(playlistId, track.id);
+      
+      // Get the playlist name
+      const playlist = await this.dataService.getPlaylist(playlistId);
+      const playlistName = playlist?.name || 'playlist';
+      
+      this.showToast(`Added to ${playlistName}`);
+      return true;
+    } catch (error) {
+      console.error('Error adding to playlist:', error);
+      this.showToast('Failed to add to playlist', 'danger');
+      return false;
     }
   }
   private async showToast(message: string, color: string = 'success') {

@@ -70,8 +70,7 @@ export class MediaPlayerService {
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
     audio.volume = 1.0;
-  }
-  private setupAudioEvents() {
+  }  private setupAudioEvents() {
     this.audioPlayer.addEventListener('loadedmetadata', () => {
       // For streamed songs, cap at 30 seconds
       if (!this.currentTrack$.getValue()?.isLocal) {
@@ -80,6 +79,7 @@ export class MediaPlayerService {
         this.duration$.next(this.audioPlayer.duration);
       }
       this._trackReady = true;
+      this.updatePlaybackState(); // Update state when metadata is loaded
     });
 
     this.audioPlayer.addEventListener('timeupdate', () => {
@@ -94,29 +94,33 @@ export class MediaPlayerService {
         this.next();
       } else {
         this.currentTime$.next(this.audioPlayer.currentTime);
+        this.updatePlaybackState(); // Update state during playback for smooth progress bar
       }
     });
 
     this.audioPlayer.addEventListener('play', () => {
       this.isPlaying$.next(true);
       this.startUpdates();
-    });
-
-    this.audioPlayer.addEventListener('pause', () => {
+    });    this.audioPlayer.addEventListener('pause', () => {
       this.isPlaying$.next(false);
       this.stopUpdates();
+      this.updatePlaybackState(); // Update state when paused
     });
 
     this.audioPlayer.addEventListener('ended', () => {
       this.next();
-    });    this.localAudioPlayer.addEventListener('loadedmetadata', () => {
+    });
+    
+    this.localAudioPlayer.addEventListener('loadedmetadata', () => {
       // For local files, use the actual duration
       this.duration$.next(this.localAudioPlayer.duration);
       this._trackReady = true;
+      this.updatePlaybackState(); // Update state when metadata is loaded
     });
 
     this.localAudioPlayer.addEventListener('timeupdate', () => {
       this.currentTime$.next(this.localAudioPlayer.currentTime);
+      this.updatePlaybackState(); // Update state during playback for smooth progress bar
     });
 
     this.localAudioPlayer.addEventListener('play', () => {

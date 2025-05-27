@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActionSheetController, AlertController, NavController, ToastController } from '@ionic/angular';
 import { DataService, Track, Playlist } from '../../services/data.service';
-import { MediaPlayerService } from '../../services/media-player.service';
+import { MediaPlayerService, PlaybackState } from '../../services/media-player.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-library',
@@ -9,8 +10,16 @@ import { MediaPlayerService } from '../../services/media-player.service';
   styleUrls: ['./library.page.scss'],
   standalone: false
 })
-export class LibraryPage implements OnInit {
+export class LibraryPage implements OnInit, OnDestroy {
   playlistArtwork: { [key: string]: string } = {};
+  tracks: Track[] = [];
+  playlists: Playlist[] = [];
+  filteredTracks: Track[] = [];
+  selectedSegment: string = 'songs';
+  isLoading: boolean = true;
+  sourceFilter: string = 'all';
+  currentPlaybackState: PlaybackState | null = null;
+  private playbackSubscription: Subscription | null = null;
   
   private async loadPlaylistArtwork(playlist: Playlist) {
     if (playlist.trackIds.length > 0) {
@@ -19,12 +28,7 @@ export class LibraryPage implements OnInit {
         this.playlistArtwork[playlist.id] = firstTrack.artwork || firstTrack.imageUrl || 'assets/placeholder-playlist.png';
       }
     }
-  }tracks: Track[] = [];
-  playlists: Playlist[] = [];
-  filteredTracks: Track[] = [];
-  selectedSegment: string = 'songs';
-  isLoading: boolean = true;
-  sourceFilter: string = 'all'; // Add this property
+  }
 
   constructor(
     private dataService: DataService,
@@ -48,6 +52,18 @@ export class LibraryPage implements OnInit {
     this.dataService.playlists$.subscribe(playlists => {
       this.playlists = playlists;
     });
+    
+    // Subscribe to playback state
+    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
+      this.currentPlaybackState = state;
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.playbackSubscription) {
+      this.playbackSubscription.unsubscribe();
+      this.playbackSubscription = null;
+    }
   }
 
   ionViewWillEnter() {
@@ -82,14 +98,15 @@ export class LibraryPage implements OnInit {
       this.selectedSegment = event.detail.value;
     }
     this.applyFilter();
-  }
-  applyFilter() {
-    // For now, just show all tracks in songs tab
+  }  applyFilter() {
+    // Start with all tracks
     this.filteredTracks = [...this.tracks];
     
     // Apply source filter if not 'all'
-    if (this.sourceFilter !== 'all') {
-      this.filteredTracks = this.filteredTracks.filter(track => track.source === this.sourceFilter);
+    if (this.sourceFilter === 'local') {
+      this.filteredTracks = this.filteredTracks.filter(track => track.isLocal === true);
+    } else if (this.sourceFilter === 'stream') {
+      this.filteredTracks = this.filteredTracks.filter(track => track.isLocal !== true);
     }
     
     // Sort by title
@@ -150,10 +167,17 @@ export class LibraryPage implements OnInit {
         }
       };
     });
-    
-    // Add create new playlist option
+      // Add create options
     buttons.unshift({
-      text: 'Create New Playlist',
+      text: `Create ${track.artist}'s Mix`,
+      handler: () => {
+        this.createArtistMixWithTrack(track);
+        return true;
+      }
+    });
+    
+    buttons.unshift({
+      text: 'Create Playlist',
       handler: () => {
         this.createPlaylistWithTrack(track);
         return true;
@@ -398,5 +422,50 @@ export class LibraryPage implements OnInit {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  }
+
+  // Check if a track is currently playing
+  isCurrentlyPlaying(track: Track): boolean {
+    if (!this.currentPlaybackState) return false;
+    
+    return (
+      this.currentPlaybackState.isPlaying && 
+      this.currentPlaybackState.currentTrack?.id === track.id
+    );
+  }
+  
+  // Toggle play/pause for a track
+  togglePlayTrack(track: Track): void {
+    if (this.currentPlaybackState?.currentTrack?.id === track.id) {
+      // The track is already the current track, toggle play/pause
+      this.mediaPlayerService.togglePlay();
+    } else {
+      // It's a different track, start playing it
+      this.playTrack(track);
+    }
+  }
+  async createArtistMixWithTrack(track: Track) {
+    // Create a mix based on the artist
+    const artistName = track.artist || 'My';
+    const playlistName = `${artistName}'s Mix`;
+    
+    try {
+      // Create the playlist
+      const playlist = await this.dataService.createPlaylist(playlistName);
+      
+      // Add the track to the playlist
+      await this.dataService.addTrackToPlaylist(playlist.id, track.id);
+      
+      this.showToast(`Created artist mix: ${playlistName}`);
+      
+      // Refresh playlists after creating a new one
+      this.loadData();
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating artist mix:', error);
+      this.showToast('Failed to create artist mix', 'danger');
+      return false;
+    }
   }
 }

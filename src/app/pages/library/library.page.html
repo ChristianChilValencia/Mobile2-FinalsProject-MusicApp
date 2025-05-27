@@ -47,18 +47,17 @@
     </div>
     
     <!-- Songs view -->
-    <div *ngIf="selectedSegment === 'songs'">
-      <div class="filter-options">
+    <div *ngIf="selectedSegment === 'songs'">      <div class="filter-options">
         <ion-chip [color]="sourceFilter === 'all' ? 'primary' : 'medium'" (click)="filterBySource('all')">
           <ion-label>All</ion-label>
         </ion-chip>
         <ion-chip [color]="sourceFilter === 'local' ? 'primary' : 'medium'" (click)="filterBySource('local')">
           <ion-icon name="phone-portrait"></ion-icon>
-          <ion-label>Local</ion-label>
+          <ion-label>Local Uploads</ion-label>
         </ion-chip>
         <ion-chip [color]="sourceFilter === 'stream' ? 'primary' : 'medium'" (click)="filterBySource('stream')">
           <ion-icon name="cloud"></ion-icon>
-          <ion-label>Streaming</ion-label>
+          <ion-label>Streamed</ion-label>
         </ion-chip>
       </div>
       
@@ -88,18 +87,14 @@
               <h2>{{ track.title }}</h2>
               <h3>{{ track.artist }}</h3>
               <p *ngIf="track.album">{{ track.album }}</p>
-            </ion-label>
-            <div class="track-actions">
-              <ion-button fill="clear" (click)="playTrack(track); $event.stopPropagation()">
-                <ion-icon slot="icon-only" name="play"></ion-icon>
+            </ion-label>            <div class="track-actions">
+              <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
+                <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
               </ion-button>
               <ion-button fill="clear" (click)="addToPlaylist(track); $event.stopPropagation()">
                 <ion-icon slot="icon-only" name="add"></ion-icon>
               </ion-button>
             </div>
-            <!-- <ion-note slot="end" *ngIf="track.duration">
-              {{ formatDuration(track.duration) }}
-            </ion-note> -->
           </ion-item>
           
           <ion-item-options side="end">

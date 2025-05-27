@@ -40,8 +40,7 @@
             <p>Upload music files to get started</p>
           </ion-col>
         </ion-row>
-      </ion-grid>      <swiper-container [options]="slideOpts" *ngIf="localMusic.length > 0">
-        <swiper-slide *ngFor="let track of localMusic">
+      </ion-grid>      <swiper-container [options]="slideOpts" *ngIf="localMusic.length > 0">        <swiper-slide *ngFor="let track of localMusic">
           <ion-card class="music-card" (click)="playTrack(track)">
             <img [src]="track.imageUrl || 'assets/music-bg.png'" [alt]="track.title">
             <ion-card-header>
@@ -49,7 +48,15 @@
               <ion-card-subtitle>{{track.artist}}</ion-card-subtitle>
             </ion-card-header>
             <div class="play-overlay">
-              <ion-icon name="play"></ion-icon>
+              <ion-icon [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
+            </div>
+            <div class="card-actions">
+              <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
+                <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
+              </ion-button>
+              <ion-button fill="clear" (click)="addToPlaylist(track); $event.stopPropagation()">
+                <ion-icon slot="icon-only" name="add"></ion-icon>
+              </ion-button>
             </div>
           </ion-card>
         </swiper-slide>

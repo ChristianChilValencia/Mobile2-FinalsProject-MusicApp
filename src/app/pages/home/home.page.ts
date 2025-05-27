@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NavController, ActionSheetController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { DataService, Track, Playlist } from '../../services/data.service';
-import { MediaPlayerService } from '../../services/media-player.service';
+import { MediaPlayerService, PlaybackState } from '../../services/media-player.service';
 
 @Component({
   selector: 'app-home',
@@ -14,16 +14,17 @@ export class HomePage implements OnInit, OnDestroy {
   currentMode = 'all';
   recentlyPlayed: Track[] = [];
   playlists: Playlist[] = [];
+  currentPlaybackState: PlaybackState | null = null;
   
   private tracksSubscription: Subscription | null = null;
   private playlistsSubscription: Subscription | null = null;
+  private playbackSubscription: Subscription | null = null;
   constructor(
     private dataService: DataService,
     private mediaPlayerService: MediaPlayerService,
     private navCtrl: NavController,
     private actionSheetController: ActionSheetController
   ) {}
-
   ngOnInit() {
     this.tracksSubscription = this.dataService.tracks$.subscribe(tracks => {
       this.recentlyPlayed = tracks.slice(0, 10);
@@ -34,6 +35,11 @@ export class HomePage implements OnInit, OnDestroy {
     this.playlistsSubscription = this.dataService.playlists$.subscribe(playlists => {
       this.playlists = playlists;
     });
+    
+    // Subscribe to playback state
+    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
+      this.currentPlaybackState = state;
+    });
   }
 
   ngOnDestroy() {
@@ -43,6 +49,10 @@ export class HomePage implements OnInit, OnDestroy {
     
     if (this.playlistsSubscription) {
       this.playlistsSubscription.unsubscribe();
+    }
+    
+    if (this.playbackSubscription) {
+      this.playbackSubscription.unsubscribe();
     }
   }
 
@@ -129,5 +139,26 @@ export class HomePage implements OnInit, OnDestroy {
     });
     
     await actionSheet.present();
+  }
+
+  // Check if a track is currently playing
+  isCurrentlyPlaying(track: Track): boolean {
+    if (!this.currentPlaybackState) return false;
+    
+    return (
+      this.currentPlaybackState.isPlaying && 
+      this.currentPlaybackState.currentTrack?.id === track.id
+    );
+  }
+  
+  // Toggle play/pause for a track
+  togglePlayTrack(track: Track): void {
+    if (this.currentPlaybackState?.currentTrack?.id === track.id) {
+      // The track is already the current track, toggle play/pause
+      this.mediaPlayerService.togglePlay();
+    } else {
+      // It's a different track, start playing it
+      this.playTrack(track);
+    }
   }
 }

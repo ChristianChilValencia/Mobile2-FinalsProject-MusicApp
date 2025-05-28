@@ -196,6 +196,11 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
     await actionSheet.present();
   }
 
+  async presentPlaylistOptions() {
+    // Use the existing presentActionSheet method
+    await this.presentActionSheet();
+  }
+
   async editPlaylistDetails() {
     if (!this.playlist) return;
     

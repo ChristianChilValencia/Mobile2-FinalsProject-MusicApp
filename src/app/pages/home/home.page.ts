@@ -25,13 +25,10 @@ export class HomePage implements OnInit, OnDestroy {
     private navCtrl: NavController,
     private actionSheetController: ActionSheetController
   ) {}  ngOnInit() {
-    this.tracksSubscription = this.dataService.tracks$.subscribe(tracks => {
-      // Don't set recently played from all tracks
-      // Only get tracks specifically marked as recently played
-      this.dataService.getRecentlyPlayedTracks().then(recentTracks => {
-        this.recentlyPlayed = recentTracks;
-        this.modeChanged();
-      });
+    // Subscribe to recently played tracks using the observable
+    this.tracksSubscription = this.dataService.recentlyPlayed$.subscribe(recentTracks => {
+      this.recentlyPlayed = recentTracks;
+      this.modeChanged();
     });
     
     this.playlistsSubscription = this.dataService.playlists$.subscribe(playlists => {
@@ -70,11 +67,7 @@ export class HomePage implements OnInit, OnDestroy {
     // Update recently played through data service
     await this.dataService.addToRecentlyPlayed(track.id);
     
-    // Refresh the recently played list
-    const recentTracks = await this.dataService.getRecentlyPlayedTracks();
-    this.recentlyPlayed = recentTracks;
-    
-    // Then play the track
+    // Play the track (no need to manually refresh recently played list)
     this.mediaPlayerService.setQueue([track], 0);
   }
 
@@ -162,6 +155,27 @@ export class HomePage implements OnInit, OnDestroy {
     } else {
       // It's a different track, start playing it
       await this.playTrack(track);
+    }
+  }
+
+  getTimeAgo(timestamp: string): string {
+    const now = new Date();
+    const played = new Date(timestamp);
+    const diff = now.getTime() - played.getTime();
+    
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      return days === 1 ? 'Yesterday' : `${days} days ago`;
+    } else if (hours > 0) {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    } else if (minutes > 0) {
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    } else {
+      return 'Just now';
     }
   }
 }

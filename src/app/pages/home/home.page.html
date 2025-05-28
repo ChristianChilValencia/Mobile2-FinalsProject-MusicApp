@@ -6,8 +6,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">  <div class="content-container">
-  <h2>Recently Played</h2>
+<ion-content [fullscreen]="true">  <div class="content-container">  <h2>Recently Played</h2>
     <section class="music-section" *ngIf="recentlyPlayed && recentlyPlayed.length > 0">
       <div class="horizontal-scroll">
         <div class="track-card" *ngFor="let track of recentlyPlayed" (click)="playTrack(track)">
@@ -16,10 +15,16 @@
             <div class="play-overlay">
               <ion-icon [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
             </div>
+            <div class="recently-played-badge" *ngIf="track.lastPlayed">
+              <ion-icon name="time-outline"></ion-icon>
+            </div>
           </div>
           <div class="track-info">
             <div class="title">{{ track.title }}</div>
             <div class="artist">{{ track.artist }}</div>
+            <div class="last-played" *ngIf="track.lastPlayed">
+              {{ getTimeAgo(track.lastPlayed) }}
+            </div>
           </div>
         </div>
       </div>

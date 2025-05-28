@@ -77,15 +77,21 @@
         </ion-button>
       </div>
         <ion-list *ngIf="filteredTracks.length > 0">
-        <ion-item-sliding *ngFor="let track of filteredTracks">
-          <ion-item button detail="false" (click)="playTrack(track)">
+        <ion-item-sliding *ngFor="let track of filteredTracks">          <ion-item button detail="false" (click)="playTrack(track)">
             <ion-thumbnail slot="start">
               <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
             </ion-thumbnail>
             <ion-label>
-              <h2>{{ track.title }}</h2>
+              <h2>{{ track.title }} 
+                <ion-badge *ngIf="track.lastPlayed" color="primary" style="font-size: 0.7rem; margin-left: 8px;">
+                  Recently Played
+                </ion-badge>
+              </h2>
               <h3>{{ track.artist }}</h3>
               <p *ngIf="track.album">{{ track.album }}</p>
+              <p *ngIf="track.lastPlayed" class="last-played-time">
+                Last played: {{ track.lastPlayed | date:'short' }}
+              </p>
             </ion-label>            <div class="track-actions">
               <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
                 <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>

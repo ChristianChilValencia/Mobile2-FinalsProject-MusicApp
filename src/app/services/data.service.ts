@@ -48,33 +48,32 @@ export enum RepeatMode {
 })
 export class DataService {
   getPlaylistCoverArt(playlist: Playlist): string | PromiseLike<string | null> | null {
-    // Return the playlist's cover art if it exists
+    // If the playlist has a coverArt, return it
     if (playlist.coverArt) {
       return playlist.coverArt;
     }
-
-    // If there are no tracks, return null
-    if (!playlist.trackIds?.length) {
-      return null;  
+    
+    // If the playlist has tracks, use the artwork of the first track
+    if (playlist.trackIds.length > 0) {
+      const firstTrackId = playlist.trackIds[0];
+      const track = this.tracksSubject.value.find(t => t.id === firstTrackId);
+      return track?.artwork || track?.imageUrl || 'assets/placeholder-playlist.png';
     }
-
-    // Try to get artwork from first track
-    const firstTrack = this.tracksSubject.value.find(t => t.id === playlist.trackIds[0]);
-    if (firstTrack?.artwork || firstTrack?.imageUrl) {
-      return firstTrack.artwork || firstTrack.imageUrl;
-    }
-
-    return null;
+    
+    // Fallback to placeholder
+    return 'assets/placeholder-playlist.png';
   }
 
   private tracksSubject = new BehaviorSubject<Track[]>([]);
   private playlistsSubject = new BehaviorSubject<Playlist[]>([]);
+  private recentlyPlayedSubject = new BehaviorSubject<Track[]>([]);
   private sqlite: SQLiteConnection;
   private db!: SQLiteDBConnection;
   private _initPromise: Promise<void> | null = null;
   
   tracks$ = this.tracksSubject.asObservable();
   playlists$ = this.playlistsSubject.asObservable();
+  recentlyPlayed$ = this.recentlyPlayedSubject.asObservable();
   
   constructor(
     private storageService: StorageService,
@@ -83,6 +82,19 @@ export class DataService {
     this.sqlite = new SQLiteConnection(CapacitorSQLite);
     this.loadTracks();
     this.loadPlaylists();
+    
+    // Initialize recently played tracks
+    this.initRecentlyPlayed();
+  }
+
+  // Initialize recently played tracks from storage
+  private async initRecentlyPlayed(): Promise<void> {
+    try {
+      const recentTracks = await this.getRecentlyPlayedTracks();
+      this.recentlyPlayedSubject.next(recentTracks);
+    } catch (error) {
+      console.error('Error initializing recently played tracks:', error);
+    }
   }
 
   async ensureInit(): Promise<void> {
@@ -274,6 +286,7 @@ export class DataService {
       throw error;
     }
   }
+  
   async addToRecentlyPlayed(trackId: string): Promise<void> {
     try {
       const tracks = this.tracksSubject.value;
@@ -311,10 +324,16 @@ export class DataService {
           [track.lastPlayed, trackId]
         );
       }
+      
+      // Update the recentlyPlayedSubject with fresh data
+      const recentTracks2 = await this.getRecentlyPlayedTracks();
+      this.recentlyPlayedSubject.next(recentTracks2);
     } catch (error) {
       console.error('Error adding track to recently played:', error);
     }
-  }async getRecentlyPlayedTracks(): Promise<Track[]> {
+  }
+
+  async getRecentlyPlayedTracks(): Promise<Track[]> {
     try {
       const recentTrackIds = await this.get('recently_played') || [];
       const tracks = this.tracksSubject.value;
@@ -334,6 +353,8 @@ export class DataService {
       return [];
     }
   }
+  
+  // Additional methods for track and playlist operations
   async getAllTracks(): Promise<Track[]> {
     return this.tracksSubject.value;
   }
@@ -360,9 +381,13 @@ export class DataService {
     }
   }
 
-  // Playlist methods
   async getAllPlaylists(): Promise<Playlist[]> {
     return this.playlistsSubject.value;
+  }
+
+  async getPlaylist(playlistId: string): Promise<Playlist | null> {
+    const playlists = this.playlistsSubject.value;
+    return playlists.find(p => p.id === playlistId) || null;
   }
 
   async createPlaylist(name: string, description?: string): Promise<Playlist> {
@@ -379,11 +404,12 @@ export class DataService {
     };
     
     playlists.push(newPlaylist);
-    this.playlistsSubject.next(playlists);
+    this.playlistsSubject.next([...playlists]);
     await this.savePlaylists(playlists);
     
     return newPlaylist;
   }
+
   async addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
     const playlists = this.playlistsSubject.value;
     const playlist = playlists.find(p => p.id === playlistId);
@@ -398,22 +424,6 @@ export class DataService {
       playlist.updatedAt = new Date().toISOString();
       this.playlistsSubject.next([...playlists]);
       await this.savePlaylists(playlists);
-    }
-  }
-
-  async getPlaylist(playlistId: string): Promise<Playlist | null> {
-    const playlists = this.playlistsSubject.value;
-    return playlists.find(p => p.id === playlistId) || null;
-  }
-
-  async deletePlaylist(playlistId: string): Promise<void> {
-    try {
-      const playlists = this.playlistsSubject.value.filter(p => p.id !== playlistId);
-      this.playlistsSubject.next(playlists);
-      await this.savePlaylists(playlists);
-    } catch (error) {
-      console.error('Error deleting playlist:', error);
-      throw error;
     }
   }
 
@@ -436,6 +446,17 @@ export class DataService {
       }
     } catch (error) {
       console.error('Error removing track from playlist:', error);
+      throw error;
+    }
+  }
+
+  async deletePlaylist(playlistId: string): Promise<void> {
+    try {
+      const playlists = this.playlistsSubject.value.filter(p => p.id !== playlistId);
+      this.playlistsSubject.next(playlists);
+      await this.savePlaylists(playlists);
+    } catch (error) {
+      console.error('Error deleting playlist:', error);
       throw error;
     }
   }
@@ -509,6 +530,19 @@ export class DataService {
         this.playlistsSubject.next([...playlists]);
         await this.savePlaylists(playlists);
       }
+
+      // Also update recently played if needed
+      const recentTracks = await this.getRecentlyPlayedTracks();
+      if (recentTracks.some(t => t.id === trackId)) {
+        // The track was in recently played, so we need to update
+        let recentIds = await this.get('recently_played') || [];
+        recentIds = recentIds.filter((id: string) => id !== trackId);
+        await this.set('recently_played', recentIds);
+        
+        // Update the recentlyPlayedSubject
+        const updatedRecentTracks = await this.getRecentlyPlayedTracks();
+        this.recentlyPlayedSubject.next(updatedRecentTracks);
+      }
     } catch (error) {
       console.error('Error removing track:', error);
       throw error;
@@ -538,5 +572,3 @@ export class DataService {
     }
   }
 }
-
-

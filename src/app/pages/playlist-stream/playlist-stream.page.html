@@ -2,6 +2,11 @@
   <ion-toolbar>    <ion-buttons slot="start">
       <ion-back-button defaultHref="/tabs/library"></ion-back-button>
     </ion-buttons>    <ion-title>{{ playlist?.name || 'Playlist' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="presentPlaylistOptions()">
+        <ion-icon slot="icon-only" name="ellipsis-vertical"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 

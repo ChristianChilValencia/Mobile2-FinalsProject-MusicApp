@@ -108,8 +108,21 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
       this.filteredTracks = this.filteredTracks.filter(track => track.source === 'stream');
     }
     
-    // Sort by title
+    // Sort by last played date first, then by title for tracks that haven't been played
     this.filteredTracks.sort((a, b) => {
+      // If both have lastPlayed timestamps, sort by most recent first
+      if (a.lastPlayed && b.lastPlayed) {
+        return new Date(b.lastPlayed).getTime() - new Date(a.lastPlayed).getTime();
+      }
+      // If only a has lastPlayed, it comes first
+      else if (a.lastPlayed) {
+        return -1;
+      }
+      // If only b has lastPlayed, it comes first
+      else if (b.lastPlayed) {
+        return 1;
+      }
+      // If neither has been played, sort by title alphabetically
       return a.title.localeCompare(b.title);
     });
   }

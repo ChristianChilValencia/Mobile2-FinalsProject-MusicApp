@@ -96,9 +96,7 @@ export class MediaPlayerService {
         this.currentTime$.next(this.audioPlayer.currentTime);
         this.updatePlaybackState(); // Update state during playback for smooth progress bar
       }
-    });
-
-    this.audioPlayer.addEventListener('play', () => {
+    });    this.audioPlayer.addEventListener('play', () => {
       this.isPlaying$.next(true);
       this.startUpdates();
     });    this.audioPlayer.addEventListener('pause', () => {
@@ -107,7 +105,16 @@ export class MediaPlayerService {
       this.updatePlaybackState(); // Update state when paused
     });
 
-    this.audioPlayer.addEventListener('ended', () => {
+    this.audioPlayer.addEventListener('ended', async () => {
+      // Refresh recently played list when track ends
+      const currentTrack = this.currentTrack$.value;
+      if (currentTrack) {
+        try {
+          await this.dataService.refreshRecentlyPlayed();
+        } catch (error) {
+          console.error('Error refreshing history on track end:', error);
+        }
+      }
       this.next();
     });
     
@@ -126,14 +133,21 @@ export class MediaPlayerService {
     this.localAudioPlayer.addEventListener('play', () => {
       this.isPlaying$.next(true);
       this.startUpdates();
-    });
-
-    this.localAudioPlayer.addEventListener('pause', () => {
+    });    this.localAudioPlayer.addEventListener('pause', () => {
       this.isPlaying$.next(false);
       this.stopUpdates();
     });
 
-    this.localAudioPlayer.addEventListener('ended', () => {
+    this.localAudioPlayer.addEventListener('ended', async () => {
+      // Refresh recently played list when track ends
+      const currentTrack = this.currentTrack$.value;
+      if (currentTrack) {
+        try {
+          await this.dataService.refreshRecentlyPlayed();
+        } catch (error) {
+          console.error('Error refreshing history on track end:', error);
+        }
+      }
       this.next();
     });
   }
@@ -170,8 +184,64 @@ export class MediaPlayerService {
     this.currentTrack$.next(track);
     this.updatePlaybackState(); // Update state when track changes
 
-    // Add track to recently played when played
-    await this.dataService.addToRecentlyPlayed(track.id);
+    try {
+      // Update lastPlayed timestamp
+      const now = new Date().toISOString();
+      
+      // Ensure track has all required fields
+      const trackToSave: Track = {
+        ...track,
+        source: track.id.startsWith('deezer-') ? 'stream' as const : 'local' as const,
+        addedAt: track.addedAt || now,
+        lastPlayed: now,
+        artwork: track.artwork || track.imageUrl || 'assets/placeholder-album.png',
+        title: track.title || 'Unknown Title',
+        artist: track.artist || 'Unknown Artist'
+      };
+
+      // Ensure track is in collection first
+      const allTracks = await this.dataService.getAllTracks();
+      const existingTrack = allTracks.find(t => t.id === track.id);
+      
+      let tracksToSave: Track[];
+      if (existingTrack) {
+        // Update existing track
+        tracksToSave = allTracks.map(t => 
+          t.id === track.id ? {
+            ...t,
+            ...trackToSave // Keep all new track data
+          } : t
+        );
+      } else {
+        // Add new track
+        tracksToSave = [...allTracks, trackToSave];
+      }
+      
+      // Save tracks first and wait for it to complete
+      await this.dataService.saveTracks(tracksToSave);
+      
+      // Verify track was saved by fetching fresh data
+      const verifyTracks = await this.dataService.getAllTracks();
+      const verifyTrack = verifyTracks.find(t => t.id === track.id);
+      
+      if (!verifyTrack) {
+        console.error(`Failed to save track ${track.id} to collection`);
+        // Continue anyway, but log the error
+      } else {
+        console.log(`Successfully saved track ${track.id} to collection`);
+        
+        // Then add to recently played history
+        try {
+          await this.dataService.addToRecentlyPlayed(track.id);
+        } catch (error) {
+          console.error('Error updating track history:', error);
+          // Continue playing even if history fails
+        }
+      }
+    } catch (error) {
+      console.error('Error updating track data:', error);
+      // Continue playing even if data update fails
+    }
 
     try {
       if (track.isLocal) {
@@ -189,46 +259,33 @@ export class MediaPlayerService {
             throw playError;
           }
         } else {
+          player.src = track.previewUrl;
+          player.load();
           try {
-            const fileData = await Filesystem.readFile({
-              path: track.previewUrl.replace('file://', ''),
-              directory: Directory.Data,
-            });
-
-            if (fileData.data) {
-              let blob: Blob;
-              if (fileData.data instanceof Blob) {
-                blob = fileData.data;
-              } else {
-                blob = this.base64ToBlob(fileData.data, 'audio/mpeg');
-              }
-              const url = URL.createObjectURL(blob);
-              this._currentBlobUrl = url;
-              player.src = url;
-              player.load();
-              await player.play();
-              this.isPlaying$.next(true);
-              this.startUpdates();
-            } else {
-              throw new Error('File data is empty');
-            }
-          } catch (webPlayError) {
-            console.error('Error playing web audio:', webPlayError);
-            throw webPlayError;
+            await player.play();
+            this.isPlaying$.next(true);
+            this.startUpdates();
+          } catch (playError) {
+            throw playError;
           }
         }
       } else {
-        // For streamed tracks, cap at 30 seconds
-        this.audioPlayer.src = track.previewUrl;
-        this.audioPlayer.load();
-        await this.audioPlayer.play();
-        this.isPlaying$.next(true);
-        this.updatePlaybackState();
+        const player = this.audioPlayer;
+        player.src = track.previewUrl;
+        player.load();
+        try {
+          await player.play();
+          this.isPlaying$.next(true);
+          this.startUpdates();
+        } catch (playError) {
+          throw playError;
+        }
       }
-    } catch (e) {
-      console.error('Playback failed:', e);
-      this.isPlaying$.next(false);
-      throw e;
+
+      await this.dataService.set('last_played_track', track);
+    } catch (error) {
+      console.error('Error playing track:', error);
+      throw error;
     }
   }
 
@@ -311,26 +368,48 @@ export class MediaPlayerService {
       console.error('Error in togglePlay:', error);
       this.isPlaying$.next(false);
       throw error;
-    }
-  }
-
-  next(): void {
+    }  }
+  async next(): Promise<void> {
     this.cleanup();
     if (!this.queue.length) return;
     this.queueIndex = (this.queueIndex + 1) % this.queue.length;
-    this.play(this.queue[this.queueIndex]);
+    
+    // Get the next track
+    const nextTrack = this.queue[this.queueIndex];
+    
+    // Add the next track to recently played BEFORE playing
+    try {
+      await this.dataService.addToRecentlyPlayed(nextTrack.id);
+    } catch (error) {
+      console.error('Error adding track to history during next():', error);
+    }
+    
+    // Then play the track
+    await this.play(nextTrack);
   }
-
-  previous(): void {
+  async previous(): Promise<void> {
     this.cleanup();
     if (!this.queue.length) return;
 
     const activePlayer = this.getCurrentPlayer();
+    
     if (activePlayer.currentTime > 3) {
       activePlayer.currentTime = 0;
     } else {
       this.queueIndex = (this.queueIndex - 1 + this.queue.length) % this.queue.length;
-      this.play(this.queue[this.queueIndex]);
+      
+      // Get the previous track
+      const prevTrack = this.queue[this.queueIndex];
+      
+      // Add the previous track to recently played BEFORE playing
+      try {
+        await this.dataService.addToRecentlyPlayed(prevTrack.id);
+      } catch (error) {
+        console.error('Error adding track to history during previous():', error);
+      }
+      
+      // Then play the track
+      await this.play(prevTrack);
     }
   }
 
@@ -518,15 +597,24 @@ export class MediaPlayerService {
 
       tempAudio.preload = 'metadata';
       tempAudio.src = url;
-    });
-  }
-
-  setQueue(tracks: Track[], startIndex = 0): void {
+    });  }
+  async setQueue(tracks: Track[], startIndex = 0): Promise<void> {
     console.log(`Setting queue with ${tracks.length} tracks, starting at index ${startIndex}`);
     this.queue = tracks;
     this.queueIndex = startIndex;
+    
     if (tracks.length) {
-      this.play(tracks[startIndex]);
+      // Ensure the starting track is added to recently played BEFORE playing
+      if (startIndex >= 0 && startIndex < tracks.length) {
+        try {
+          await this.dataService.addToRecentlyPlayed(tracks[startIndex].id);
+        } catch (error) {
+          console.error('Error adding track to history during setQueue:', error);
+        }
+      }
+      
+      // Then play the track
+      await this.play(tracks[startIndex]);
     }
   }
 

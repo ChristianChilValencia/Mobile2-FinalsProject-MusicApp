@@ -24,7 +24,14 @@ export class HomePage implements OnInit, OnDestroy {
     private mediaPlayerService: MediaPlayerService,
     private navCtrl: NavController,
     private actionSheetController: ActionSheetController
-  ) {}  ngOnInit() {
+  ) {} 
+
+  ionViewWillEnter() {
+    // Refresh recently played tracks when entering the home page
+    this.dataService.refreshRecentlyPlayed();
+  }
+  
+  ngOnInit() {
     // Subscribe to recently played tracks using the observable
     this.tracksSubscription = this.dataService.recentlyPlayed$.subscribe(recentTracks => {
       this.recentlyPlayed = recentTracks;
@@ -64,11 +71,15 @@ export class HomePage implements OnInit, OnDestroy {
       this.recentlyPlayed = this.recentlyPlayed.filter(track => track.source === 'stream');
     }
   }  async playTrack(track: Track) {
-    // Update recently played through data service
-    await this.dataService.addToRecentlyPlayed(track.id);
-    
-    // Play the track (no need to manually refresh recently played list)
-    this.mediaPlayerService.setQueue([track], 0);
+    try {
+      // Update recently played through data service
+      await this.dataService.addToRecentlyPlayed(track.id);
+      
+      // Play the track (no need to manually refresh recently played list)
+      this.mediaPlayerService.setQueue([track], 0);
+    } catch (error) {
+      console.error('Error playing track:', error);
+    }
   }
 
   openPlaylist(playlist: Playlist) {
@@ -176,6 +187,21 @@ export class HomePage implements OnInit, OnDestroy {
       return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
     } else {
       return 'Just now';
+    }
+  }
+
+  // Refresh the recently played list - can be called by UI (pull-to-refresh, etc.)
+  async refreshRecentlyPlayed(event?: any) {
+    try {
+      await this.dataService.refreshRecentlyPlayed();
+      if (event) {
+        event.target.complete();
+      }
+    } catch (error) {
+      console.error('Error refreshing recently played:', error);
+      if (event) {
+        event.target.complete();
+      }
     }
   }
 }

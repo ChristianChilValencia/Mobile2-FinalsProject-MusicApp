@@ -90,10 +90,40 @@ export class SearchPage implements OnInit, OnDestroy {
     this.searchQuery = '';
     this.searchResults = [];
     this.errorMessage = '';
-  }
+  }  async playTrack(track: Track) {
+    try {
+      // Prepare track for saving - ensure proper timestamps
+      const trackToSave = {
+        ...track,
+        lastPlayed: new Date().toISOString(),
+        addedAt: track.addedAt || new Date().toISOString()
+      };
 
-  playTrack(track: Track) {
-    this.mediaPlayerService.setQueue([track], 0);
+      // Check if track already exists in collection
+      const allTracks = await this.dataService.getAllTracks();
+      const existingTrack = allTracks.find(t => t.id === trackToSave.id);
+      
+      // Save track to collection BEFORE playing
+      if (!existingTrack) {
+        console.log('Saving new track to collection');
+        await this.dataService.saveTracks([...allTracks, trackToSave]);
+      } else {
+        console.log('Updating existing track in collection');
+        const updatedTracks = allTracks.map(t => 
+          t.id === trackToSave.id ? trackToSave : t
+        );
+        await this.dataService.saveTracks(updatedTracks);
+      }
+      
+      // Play the track using the play method (not setQueue)
+      await this.mediaPlayerService.play(trackToSave);
+      
+      // Show a toast to confirm the track is playing
+      this.showToast(`Playing "${trackToSave.title}"`);
+    } catch (error) {
+      console.error('Error playing track:', error);
+      this.showToast('Error playing track', 'danger');
+    }
   }
 
   async showAddToPlaylistOptions(track: Track) {
@@ -330,5 +360,16 @@ export class SearchPage implements OnInit, OnDestroy {
       // It's a different track, start playing it
       this.playTrack(track);
     }
+  }
+
+  // Add a helper method to show toast messages
+  async showToast(message: string, color: string = 'success') {
+    const toast = await this.toastController.create({
+      message,
+      duration: 2000,
+      position: 'top',
+      color
+    });
+    await toast.present();
   }
 }

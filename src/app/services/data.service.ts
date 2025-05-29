@@ -285,58 +285,107 @@ export class DataService {
       console.error('Error saving local music:', error);
       throw error;
     }
-  }
-  
-  async addToRecentlyPlayed(trackId: string): Promise<void> {
+  }  async addToRecentlyPlayed(trackId: string): Promise<void> {
+    if (!trackId) {
+      console.error('Invalid trackId provided to addToRecentlyPlayed');
+      return;
+    }
+    
     try {
+      console.log('DataService - Adding track to recently played:', trackId);
+      
+      // Get current tracks
       const tracks = this.tracksSubject.value;
-      const track = tracks.find(t => t.id === trackId);
-      
-      if (!track) return;
-      
-      // Create a new array of recent tracks
-      let recentTracks = await this.get('recently_played') || [];
-      
-      // Remove the track if it's already in the list to avoid duplicates
-      recentTracks = recentTracks.filter((id: string) => id !== trackId);
-      
-      // Add the track ID to the beginning of the array
-      recentTracks.unshift(trackId);
-      
-      // Limit to most recent 20 tracks
-      if (recentTracks.length > 20) {
-        recentTracks = recentTracks.slice(0, 20);
+      let track = tracks.find(t => t.id === trackId);
+
+      // For Deezer tracks, do additional verification and ensure all required fields are set
+      if (trackId.startsWith('deezer-')) {
+        console.log(`Verifying Deezer track ${trackId} before adding to history`);
+        
+        // First check if track exists in collection
+        if (!track) {
+          console.error(`Deezer track ${trackId} not found in collection. Cannot add to history.`);
+          throw new Error(`Track must be saved to collection before adding to history: ${trackId}`);
+        }
+
+        // Ensure track has all required fields
+        const updatedTrack: Track = {
+          ...track,
+          source: 'stream', // Always set stream for Deezer tracks
+          addedAt: track.addedAt || new Date().toISOString(),
+          artist: track.artist || 'Unknown Artist',
+          title: track.title || 'Unknown Title',
+          artwork: track.artwork || 'assets/placeholder-album.png'
+        };
+
+        // Save the updated track back to collection
+        const updatedTracks = tracks.map(t => t.id === trackId ? updatedTrack : t);
+        await this.saveTracks(updatedTracks);
+        track = updatedTrack; // Update the reference
+        console.log(`Updated Deezer track ${trackId} with source = stream`);
       }
-      
-      // Save the updated recent tracks
-      await this.set('recently_played', recentTracks);
-      
+
+      // Make sure we still have a valid track
+      if (!track) {
+        console.error(`Track with ID ${trackId} not found in tracks collection.`);
+        throw new Error(`Track with ID ${trackId} must be in collection before adding to history.`);
+      }
+
       // Update the track's lastPlayed timestamp
-      track.lastPlayed = new Date().toISOString();
-      this.tracksSubject.next([...tracks]);
-      await this.saveTracks(tracks);
-      
+      const updatedTrack: Track = {
+        ...track,
+        lastPlayed: new Date().toISOString()
+      };
+      console.log(`Updated lastPlayed for ${updatedTrack.title} to ${updatedTrack.lastPlayed}`);
+
+      // Update the tracks collection
+      const freshTracks = tracks.map(t => t.id === trackId ? updatedTrack : t);
+      this.tracksSubject.next(freshTracks);
+      await this.saveTracks(freshTracks);
+
       // Update SQLite if on mobile
       if (this.platform.is('hybrid')) {
         await this.ensureInit();
         await this.db.run(
           `UPDATE tracks SET last_played = ? WHERE id = ?;`,
-          [track.lastPlayed, trackId]
+          [updatedTrack.lastPlayed, trackId]
         );
       }
-      
+
+      // Get current recently played IDs
+      let recentTracks = await this.get('recently_played') || [];
+      console.log('Current recently played IDs:', recentTracks);
+
+      // Remove the track if it's already in the list (avoid duplicates)
+      recentTracks = recentTracks.filter((id: string) => id !== trackId);
+
+      // Add the track ID to the beginning of the array
+      recentTracks.unshift(trackId);
+
+      // Limit to most recent 20 tracks
+      recentTracks = recentTracks.slice(0, 20);
+      console.log('Updated recently played IDs:', recentTracks);
+
+      // Save the updated recent tracks
+      await this.set('recently_played', recentTracks);
+
       // Update the recentlyPlayedSubject with fresh data
-      const recentTracks2 = await this.getRecentlyPlayedTracks();
-      this.recentlyPlayedSubject.next(recentTracks2);
+      const updatedRecentTracks = await this.getRecentlyPlayedTracks();
+      this.recentlyPlayedSubject.next(updatedRecentTracks);
+
+      console.log(`Successfully added track to history: ${updatedRecentTracks.length} tracks in history`);
     } catch (error) {
       console.error('Error adding track to recently played:', error);
+      throw error; // Re-throw the error since this is a critical operation
     }
   }
-
   async getRecentlyPlayedTracks(): Promise<Track[]> {
     try {
       const recentTrackIds = await this.get('recently_played') || [];
+      console.log('DataService - Getting recently played tracks, IDs:', recentTrackIds);
+      
       const tracks = this.tracksSubject.value;
+      console.log('Total tracks in collection:', tracks.length);
       
       // Get the track objects for the recent IDs, maintain order
       const recentTracks: Track[] = [];
@@ -344,16 +393,41 @@ export class DataService {
         const track = tracks.find(t => t.id === id);
         if (track) {
           recentTracks.push(track);
+        } else {
+          console.warn(`Track with ID ${id} is in recently played but not found in tracks collection`);
         }
       }
       
+      console.log('Found', recentTracks.length, 'recently played tracks');
       return recentTracks;
     } catch (error) {
       console.error('Error getting recently played tracks:', error);
       return [];
     }
   }
-  
+    // Method to force refresh recently played tracks
+  async refreshRecentlyPlayed(): Promise<void> {
+    try {
+      console.log('DataService - Force refreshing recently played tracks');
+      const recentTracks = await this.getRecentlyPlayedTracks();
+      
+      // Log each track to help with debugging
+      if (recentTracks.length > 0) {
+        console.log('Recently played tracks:');
+        recentTracks.forEach((track, index) => {
+          console.log(`${index + 1}. ${track.title} by ${track.artist} (ID: ${track.id}, Last played: ${track.lastPlayed})`);
+        });
+      } else {
+        console.log('No recently played tracks found');
+      }
+      
+      this.recentlyPlayedSubject.next(recentTracks);
+      console.log('Refreshed recently played tracks:', recentTracks.length);
+    } catch (error) {
+      console.error('Error refreshing recently played tracks:', error);
+    }
+  }
+
   // Additional methods for track and playlist operations
   async getAllTracks(): Promise<Track[]> {
     return this.tracksSubject.value;

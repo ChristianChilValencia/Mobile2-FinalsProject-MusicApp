@@ -217,7 +217,7 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       const errToast = await this.toastCtrl.create({
         message: 'Error uploading files',
         duration: 3000,
-        position: 'bottom',
+        position: 'top',
         color: 'danger'
       });
       await errToast.present();
@@ -226,9 +226,11 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       input.value = '';
     }
   }
-
   async playTrack(track: Track) {
     try {
+      // First add to recently played history
+      await this.dataService.addToRecentlyPlayed(track.id);
+      // Then play the track
       await this.audioService.setQueue([track], 0);
       await this.router.navigate(['/player']);
     } catch (error) {

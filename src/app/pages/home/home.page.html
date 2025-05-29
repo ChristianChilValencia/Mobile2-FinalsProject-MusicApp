@@ -6,7 +6,17 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">  <div class="content-container">  <h2>Recently Played</h2>
+<ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="refreshRecentlyPlayed($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="circles"
+      refreshingText="Refreshing...">
+    </ion-refresher-content>
+  </ion-refresher>
+  
+  <div class="content-container"><h2>Recently Played</h2>
     <section class="music-section" *ngIf="recentlyPlayed && recentlyPlayed.length > 0">
       <div class="horizontal-scroll">
         <div class="track-card" *ngFor="let track of recentlyPlayed" (click)="playTrack(track)">
@@ -19,14 +29,30 @@
               <ion-icon name="time-outline"></ion-icon>
             </div>
           </div>
-          <div class="track-info">
-            <div class="title">{{ track.title }}</div>
+          <div class="track-info">            <div class="title">{{ track.title }}</div>
             <div class="artist">{{ track.artist }}</div>
             <div class="last-played" *ngIf="track.lastPlayed">
+              <ion-icon name="time-outline"></ion-icon>
               {{ getTimeAgo(track.lastPlayed) }}
             </div>
           </div>
         </div>
+      </div>
+    </section>
+      <!-- Empty state for when there are no recently played tracks -->
+    <section class="music-section" *ngIf="!recentlyPlayed || recentlyPlayed.length === 0">
+      <div class="empty-state">
+        <ion-icon name="time-outline"></ion-icon>
+        <h3>No Playback History</h3>
+        <p>Start by playing some music to build your history</p>
+        <ion-button fill="clear" (click)="navigateToSearch()">
+          <ion-icon slot="start" name="search"></ion-icon>
+          Find Music
+        </ion-button>
+        <ion-button fill="clear" (click)="refreshRecentlyPlayed()">
+          <ion-icon slot="start" name="refresh"></ion-icon>
+          Refresh History
+        </ion-button>
       </div>
     </section>
 

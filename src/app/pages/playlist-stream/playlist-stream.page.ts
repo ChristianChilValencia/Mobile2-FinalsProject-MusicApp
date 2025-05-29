@@ -79,10 +79,15 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
       this.navController.navigateBack('/tabs/library');
     }
   }
-
-  playTrack(track: Track, index: number) {
-    // Start playback from the selected track
-    this.mediaPlayerService.setQueue(this.playlistTracks, index);
+  async playTrack(track: Track, index: number) {
+    try {
+      // Add to recently played first
+      await this.dataService.addToRecentlyPlayed(track.id);
+      // Start playback from the selected track
+      this.mediaPlayerService.setQueue(this.playlistTracks, index);
+    } catch (error) {
+      console.error('Error playing track:', error);
+    }
   }
 
   playAll() {

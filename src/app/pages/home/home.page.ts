@@ -103,7 +103,7 @@ export class HomePage implements OnInit, OnDestroy {
       await this.mediaPlayerService.play(trackToPlay);
       
       // Navigate to player after successfully starting playback
-      this.navCtrl.navigateForward('/player');
+      this.navCtrl.navigateForward('tabs/player');
       
       this.showToast(`Playing "${track.title}"`);
     } catch (error) {

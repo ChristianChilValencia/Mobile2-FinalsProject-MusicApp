@@ -52,13 +52,16 @@
           Find Music
         </ion-button>
       </div>
-    </section>    <ion-list-header>
+    </section>    
+    
+    <ion-list-header>
       <ion-label>Trending Tracks</ion-label>
-      <ion-button fill="clear" size="small" (click)="loadTrendingTracks()" *ngIf="!loadingTrending">
+      <!-- <ion-button fill="clear" size="small" (click)="loadTrendingTracks()" *ngIf="!loadingTrending">
         <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
-      </ion-button>
+      </ion-button> -->
     </ion-list-header>
-    <section class="music-section">      <div *ngIf="loadingTrending" class="status-message">
+    <section class="music-section">      
+      <div *ngIf="loadingTrending" class="status-message">
         <ion-spinner name="dots"></ion-spinner>
         <p>Loading trending tracks...</p>
       </div>

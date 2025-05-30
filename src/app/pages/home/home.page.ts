@@ -93,23 +93,8 @@ export class HomePage implements OnInit, OnDestroy {
   }  // Play a trending track
   async playTrendingTrack(track: DeezerTrack) {
     try {
-      const trackToPlay: Track = {
-        id: `deezer-${track.id}`,
-        title: track.title,
-        artist: track.artist?.name || 'Unknown Artist',
-        album: track.album?.title || 'Unknown Album',
-        duration: track.duration,
-        imageUrl: track.album?.cover_medium || 'assets/placeholder-album.png',
-        previewUrl: track.preview,
-        spotifyId: '',
-        liked: false,
-        isLocal: false,
-        source: 'stream',
-        addedAt: new Date().toISOString(),
-        pathOrUrl: track.preview,
-        artwork: track.album?.cover_medium || null,
-        type: 'mp3'
-      };
+      // Convert to our track format using the helper method
+      const trackToPlay = this.convertDeezerTrackToTrack(track);
 
       // First ensure the track is saved to the database correctly
       await this.saveTrackIfNeeded(trackToPlay);
@@ -291,103 +276,91 @@ export class HomePage implements OnInit, OnDestroy {
     } else {
       return 'Just now';
     }
-  }
-  // Add a trending track to a playlist
+  }  // Add a trending track to a playlist - initial entry point from UI
   async addTrackToPlaylist(track: DeezerTrack) {
     try {
-      // First convert the Deezer track to our Track format
-      const trackToAdd: Track = {
-        id: `deezer-${track.id}`,
-        title: track.title,
-        artist: track.artist?.name || 'Unknown Artist',
-        album: track.album?.title || 'Unknown Album',
-        duration: track.duration,
-        imageUrl: track.album?.cover_medium || 'assets/placeholder-album.png',
-        previewUrl: track.preview,
-        spotifyId: '',
-        liked: false,
-        isLocal: false,
-        source: 'stream',
-        addedAt: new Date().toISOString(),
-        pathOrUrl: track.preview,
-        artwork: track.album?.cover_medium || null,
-        type: 'mp3'
-      };
-
+      // Convert DeezerTrack to our internal Track format
+      const trackToAdd = this.convertDeezerTrackToTrack(track);
+      
       // Make sure the track is saved first
       await this.saveTrackIfNeeded(trackToAdd);
       
-      // Get all playlists to show in action sheet
-      const playlists = await this.dataService.getAllPlaylists();
-      
-      if (playlists.length === 0) {
-        // No playlists yet, ask to create one
-        this.createCustomPlaylistWithTrack(trackToAdd);
-        return;
-      }
-      
-      // Create buttons for each playlist
-      const buttons: ActionSheetButton[] = playlists.map(playlist => ({
-        text: playlist.name,
-        handler: async () => {
-          try {
-            // Ensure track is in collection before adding to playlist
-            const allTracks = await this.dataService.getAllTracks();
-            const trackExists = allTracks.some(t => t.id === trackToAdd.id);
-            
-            if (!trackExists) {
-              console.log('Track not in collection, saving it first...');
-              await this.saveTrackIfNeeded(trackToAdd);
-            }
-            
-            await this.dataService.addTrackToPlaylist(playlist.id, trackToAdd.id);
-            this.showToast(`Added to playlist: ${playlist.name}`);
-            return true;
-          } catch (error) {
-            console.error('Error adding to playlist:', error);
-            this.showToast('Failed to add to playlist', 'danger');
-            return false;
-          }
-        }
-      }));      // Add buttons for creating new playlists
-      buttons.push(
-        {
-          text: 'Create New Playlist',
-          handler: async () => {
-            try {
-              // Ensure track is in collection before creating playlist
-              const allTracks = await this.dataService.getAllTracks();
-              const trackExists = allTracks.some(t => t.id === trackToAdd.id);
-              
-              if (!trackExists) {
-                console.log('Track not in collection, saving it first...');
-                await this.saveTrackIfNeeded(trackToAdd);
-              }
-              
-              this.createCustomPlaylistWithTrack(trackToAdd);
-              return true;
-            } catch (error) {
-              console.error('Error preparing to create playlist:', error);
-              this.showToast('Failed to prepare track', 'danger');
-              return false;
-            }
-          }
-        },
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        }
-      );
-      
-      const actionSheet = await this.actionSheetController.create({
-        header: 'Add to Playlist',
-        buttons
-      });
-
-      await actionSheet.present();
+      // Show the add to playlist options
+      await this.showAddToPlaylistOptions(trackToAdd);
     } catch (error) {
       console.error('Error preparing to add track to playlist:', error);
       this.showToast('Failed to prepare track', 'danger');
+    }
+  }
+  
+  // Show options to add a track to playlist (similar to search page implementation)
+  async showAddToPlaylistOptions(track: Track) {
+    // Get all playlists
+    const playlists = await this.dataService.getAllPlaylists();
+    
+    const buttons: ActionSheetButton[] = [];
+    
+    // Add options to create new playlists (at the top, just like search page)
+    buttons.push({
+      text: `Create ${track.artist}'s Mix`,
+      handler: () => {
+        this.createArtistMixWithTrack(track);
+        return true;
+      }
+    });
+    
+    buttons.push({
+      text: 'Create Playlist',
+      handler: () => {
+        this.createCustomPlaylistWithTrack(track);
+        return true;
+      }
+    });
+    
+    // Add existing playlists
+    if (playlists.length > 0) {
+      playlists.forEach(playlist => {
+        buttons.push({
+          text: playlist.name,
+          handler: () => {
+            this.addTrackToExistingPlaylist(track, playlist.id);
+            return true;
+          }
+        });
+      });
+    }
+    
+    // Add cancel button
+    buttons.push({
+      text: 'Cancel',
+      role: 'cancel'
+    });
+    
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Add to Playlist',
+      buttons
+    });
+    
+    await actionSheet.present();
+  }
+  
+  // Add a track to an existing playlist
+  async addTrackToExistingPlaylist(track: Track, playlistId: string) {
+    try {
+      // Ensure track is in collection
+      await this.saveTrackIfNeeded(track);
+      
+      // Add to playlist
+      await this.dataService.addTrackToPlaylist(playlistId, track.id);
+      
+      // Get playlist name for toast message
+      const playlist = await this.dataService.getPlaylist(playlistId);
+      const playlistName = playlist?.name || 'playlist';
+      
+      this.showToast(`Added to ${playlistName}`);
+    } catch (error) {
+      console.error('Error adding to playlist:', error);
+      this.showToast('Failed to add to playlist', 'danger');
     }
   }
   // Create a custom playlist with a track
@@ -456,6 +429,28 @@ export class HomePage implements OnInit, OnDestroy {
       this.showToast('Failed to prepare track', 'danger');
     }
   }
+  // Create an artist mix playlist with a track
+  async createArtistMixWithTrack(track: Track) {
+    try {
+      // Ensure track exists in collection
+      await this.saveTrackIfNeeded(track);
+      
+      // Create a mix based on the artist
+      const artistName = track.artist || 'My';
+      const mixName = `${artistName}'s Mix`;
+      
+      // Create the playlist
+      const playlist = await this.dataService.createPlaylist(mixName);
+      
+      // Add the track to the playlist
+      await this.dataService.addTrackToPlaylist(playlist.id, track.id);
+      
+      this.showToast(`Created artist mix: ${mixName}`);
+    } catch (error) {
+      console.error('Error creating artist mix:', error);
+      this.showToast('Failed to create artist mix', 'danger');
+    }
+  }
 
   // Helper method to show toast messages
   async showToast(message: string, color: string = 'success') {
@@ -466,5 +461,26 @@ export class HomePage implements OnInit, OnDestroy {
       color
     });
     await toast.present();
+  }
+
+  // Convert Deezer track to our internal Track format
+  convertDeezerTrackToTrack(track: DeezerTrack): Track {
+    return {
+      id: `deezer-${track.id}`,
+      title: track.title,
+      artist: track.artist?.name || 'Unknown Artist',
+      album: track.album?.title || 'Unknown Album',
+      duration: track.duration,
+      imageUrl: track.album?.cover_medium || 'assets/placeholder-album.png',
+      previewUrl: track.preview,
+      spotifyId: '',
+      liked: false,
+      isLocal: false,
+      source: 'stream',
+      addedAt: new Date().toISOString(),
+      pathOrUrl: track.preview,
+      artwork: track.album?.cover_medium || null,
+      type: 'mp3'
+    };
   }
 }

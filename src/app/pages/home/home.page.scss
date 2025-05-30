@@ -11,6 +11,110 @@
     margin-bottom: 16px;
     color: var(--ion-text-color);
   }
+  
+  .status-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    color: var(--ion-color-medium);
+    
+    ion-icon, ion-spinner {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    p {
+      font-size: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    
+    ion-button {
+      --color: var(--ion-color-primary);
+      margin-top: 8px;
+    }
+    
+    &.error-message {
+      ion-icon {
+        color: var(--ion-color-danger);
+      }
+    }
+  }// Keep the existing loading and error containers for backward compatibility
+  .loading-container, .error-container, .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    color: var(--ion-color-medium);
+    
+    ion-icon, ion-spinner {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    p {
+      font-size: 16px;
+      text-align: center;
+    }
+  }  .trending-list {
+    margin-top: 0;
+    background: transparent;
+    
+    ion-item {
+      --padding-start: 8px;
+      --inner-padding-end: 8px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      
+      ion-thumbnail {
+        width: 56px;
+        height: 56px;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      
+      ion-label {
+        h2 {
+          font-weight: 500;
+          margin-bottom: 4px;
+          font-size: 16px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        
+        h3 {
+          font-size: 14px;
+          color: var(--ion-color-medium);
+          margin-bottom: 2px;
+        }
+        
+        p {
+          font-size: 12px;
+          color: var(--ion-color-medium);
+        }
+      }
+      
+      .item-actions {
+        display: flex;
+        align-items: center;
+        
+        ion-button {
+          --padding-start: 4px;
+          --padding-end: 4px;
+          margin: 0;
+          
+          ion-icon {
+            color: var(--ion-color-primary);
+            font-size: 20px;
+          }
+        }
+      }
+    }
+  }
 }
 
 .horizontal-scroll {
@@ -35,15 +139,20 @@
 }
 
 .track-card {
-  flex: 0 0 140px; /* Smaller fixed width for scrolling cards */
-  background: var(--ion-card-background);
-  border-radius: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  max-width: 160px;
+  margin-right: 12px;
+  background: var(--ion-card-background, #fff);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease;
 
-  &:hover {
-    transform: translateY(-4px);
+  &:active {
+    transform: scale(0.98);
   }
   
   img {
@@ -201,36 +310,172 @@
   }
 }
 
-.empty-state {
+/* Trending Tracks section styles */
+.loading-container, 
+.error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 30px 20px;
+  padding: 24px;
   text-align: center;
-  background: rgba(var(--ion-color-light-rgb), 0.5);
-  border-radius: 12px;
-  margin: 10px 0;
   
-  ion-icon {
-    font-size: 48px;
-    color: var(--ion-color-medium);
-    margin-bottom: 16px;
+  ion-spinner {
+    margin-bottom: 12px;
   }
   
-  h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--ion-color-dark);
+  ion-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    color: var(--ion-color-medium);
   }
   
   p {
     color: var(--ion-color-medium);
     margin-bottom: 16px;
   }
+}
+
+/* Album artwork and track info styles */
+.album-art {
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+}
+
+.track-info,
+.playlist-info {
+  padding: 8px;
+  
+  .title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .artist,
+  .tracks-count {
+    font-size: 12px;
+    color: var(--ion-color-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Empty state styling */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  
+  ion-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--ion-color-medium);
+  }
+  
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    margin-bottom: 16px;
+    max-width: 260px;
+  }
+}
+
+/* Track card styling with action buttons */
+.track-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  max-width: 160px;
+  margin-right: 12px;
+  background: var(--ion-card-background, #fff);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.album-art {
+  position: relative;
+  
+  .play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    
+    ion-icon {
+      font-size: 42px;
+      color: white;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    }
+  }
+  
+  &:hover .play-overlay {
+    opacity: 1;
+  }
+}
+
+.track-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 4px 4px;
   
   ion-button {
-    --color: var(--ion-color-primary);
+    --padding-start: 4px;
+    --padding-end: 4px;
+    height: 30px;
+    margin: 0;
+    
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+}
+
+/* List header styling */
+ion-list-header {
+  padding-left: 0;
+  padding-right: 0;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  
+  ion-label {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ion-text-color);
+    margin: 0;
   }
 }

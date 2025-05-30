@@ -52,20 +52,46 @@
           Find Music
         </ion-button>
       </div>
-    </section>
-
-  <h2>Your Playlists</h2>
-    <section class="music-section" *ngIf="playlists && playlists.length > 0">
-      <div class="playlists-grid">
-        <div class="playlist-card" *ngFor="let playlist of playlists" (click)="openPlaylist(playlist)">
-          <div class="playlist-art">
-            <img [src]="playlist.coverArt || getFirstTrackArtwork(playlist)" alt="Playlist Art">
+    </section>    <ion-list-header>
+      <ion-label>Trending Tracks</ion-label>
+      <ion-button fill="clear" size="small" (click)="loadTrendingTracks()" *ngIf="!loadingTrending">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-list-header>
+    <section class="music-section">      <div *ngIf="loadingTrending" class="status-message">
+        <ion-spinner name="dots"></ion-spinner>
+        <p>Loading trending tracks...</p>
+      </div>
+      
+      <div *ngIf="trendingError" class="status-message">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <p>Could not load trending tracks</p>
+        <ion-button fill="clear" (click)="loadTrendingTracks()">
+          <ion-icon slot="start" name="refresh"></ion-icon>
+          Retry
+        </ion-button>
+      </div><ion-list *ngIf="!loadingTrending && !trendingError && trendingTracks.length > 0" class="trending-list">
+        <ion-item *ngFor="let track of trendingTracks" (click)="playTrendingTrack(track)" button detail="false">
+          <ion-thumbnail slot="start">
+            <img [src]="track.album.cover_medium || 'assets/placeholder-album.png'" alt="Album Art">
+          </ion-thumbnail>
+          <ion-label>
+            <h2>{{ track.title }}</h2>
+            <h3>{{ track.artist.name }}</h3>
+            <p *ngIf="track.album?.title">{{ track.album.title }}</p>
+          </ion-label>        
+          <div class="item-actions" slot="end">
+            <ion-button fill="clear" (click)="playTrendingTrack(track); $event.stopPropagation()">
+              <ion-icon slot="icon-only" name="play"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" (click)="addTrackToPlaylist(track); $event.stopPropagation()">
+              <ion-icon slot="icon-only" name="add"></ion-icon>
+            </ion-button>
           </div>
-          <div class="playlist-info">
-            <div class="title">{{ playlist.name }}</div>
-            <div class="tracks-count">{{ playlist.trackIds.length }} tracks</div>
-          </div>
-        </div>
+        </ion-item>
+      </ion-list>      <div *ngIf="!loadingTrending && !trendingError && trendingTracks.length === 0" class="status-message">
+        <ion-icon name="musical-notes-outline"></ion-icon>
+        <p>No trending tracks available</p>
       </div>
     </section>
     <br><br><br><br>

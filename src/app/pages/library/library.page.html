@@ -18,20 +18,8 @@
     </ion-refresher-content>
   </ion-refresher>
   
-  <div class="library-container">    <!-- Segment to switch between playlists and songs -->
-    <ion-segment [(ngModel)]="selectedSegment" (ionChange)="segmentChanged()">
-      <ion-segment-button value="playlists">
-        <ion-label>Playlists</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="recents">
-        <ion-label>Recents</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="songs">
-        <ion-label>History</ion-label>
-      </ion-segment-button>
-    </ion-segment>
+  <div class="library-container">
       <!-- Playlists view -->
-    <div *ngIf="selectedSegment === 'playlists'">   
       <div class="empty-state" *ngIf="playlists.length === 0">
         <ion-icon name="musical-notes"></ion-icon>
         <h3>No Playlists Yet</h3>
@@ -49,148 +37,12 @@
           </ion-label>
         </ion-item>
       </ion-list>       
-      <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="selectedSegment === 'playlists'" style="bottom: 80px;">
+
+      <!-- Floating action button for creating playlist -->
+      <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="selectedSegment === 'playlists'" style="bottom: 100px; right: 16px; position: fixed; z-index: 999;">
         <ion-fab-button (click)="createPlaylist()">
           <ion-icon name="add"></ion-icon>
         </ion-fab-button>
       </ion-fab>
     </div>
-      <!-- Songs view -->    <div *ngIf="selectedSegment === 'songs'">      <div class="filter-options">
-        <ion-chip [color]="sourceFilter === 'all' ? 'primary' : 'medium'" (click)="filterBySource('all')">
-          <ion-label>All</ion-label>
-        </ion-chip>
-        <ion-chip [color]="sourceFilter === 'local' ? 'primary' : 'medium'" (click)="filterBySource('local')">
-          <ion-icon name="phone-portrait"></ion-icon>
-          <ion-label>Local</ion-label>
-        </ion-chip>
-        <ion-chip [color]="sourceFilter === 'stream' ? 'primary' : 'medium'" (click)="filterBySource('stream')">
-          <ion-icon name="cloud"></ion-icon>
-          <ion-label>Streamed</ion-label>
-        </ion-chip>
-        <ion-button size="small" fill="clear" (click)="refreshHistory()">
-          <ion-icon name="refresh-outline"></ion-icon>
-        </ion-button>
-        <ion-button size="small" fill="clear" (click)="debugHistory()">
-          <ion-icon name="bug-outline"></ion-icon>
-        </ion-button>
-      </div>
-        <div class="empty-state" *ngIf="filteredTracks.length === 0">
-        <ion-icon name="time-outline"></ion-icon>
-        <h3>No Playback History</h3>
-        <p *ngIf="sourceFilter === 'local'">No local tracks have been played yet</p>
-        <p *ngIf="sourceFilter === 'stream'">No streaming tracks have been played yet</p>
-        <p *ngIf="sourceFilter === 'all'">Start by playing some music to build your history</p>
-          <ion-button fill="clear" *ngIf="sourceFilter === 'local'" expand="block" (click)="navigateToUploads()">
-          <ion-icon slot="start" name="cloud-upload"></ion-icon>
-          Upload Music
-        </ion-button>
-        
-        <ion-button fill="clear" *ngIf="sourceFilter === 'stream'" expand="block" (click)="navigateToSearch()">
-          <ion-icon slot="start" name="search" fill="clear"></ion-icon>
-          Search Music
-        </ion-button>
-      </div>
-        <ion-list *ngIf="filteredTracks.length > 0">
-        <ion-item-sliding *ngFor="let track of filteredTracks">          <ion-item button detail="false" (click)="playTrack(track)">
-            <ion-thumbnail slot="start">
-              <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
-            </ion-thumbnail>
-            <ion-label>
-              <h2>{{ track.title }} 
-                <ion-badge *ngIf="track.lastPlayed" color="primary" style="font-size: 0.7rem; margin-left: 8px;">
-                  Recently Played
-                </ion-badge>
-              </h2>              <h3>{{ track.artist }}</h3>
-              <p *ngIf="track.album">{{ track.album }}</p>
-              <p *ngIf="track.lastPlayed" class="last-played-time">
-                <ion-icon name="time-outline" size="small"></ion-icon>
-                {{ getTimeAgo(track.lastPlayed) }}
-              </p>
-            </ion-label>            <div class="track-actions">
-              <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
-                <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
-              </ion-button>
-              <ion-button fill="clear" (click)="addToPlaylist(track); $event.stopPropagation()">
-                <ion-icon slot="icon-only" name="add"></ion-icon>
-              </ion-button>
-            </div>
-          </ion-item>
-          
-          <ion-item-options side="end">
-            <ion-item-option color="danger" (click)="deleteTrack(track)">
-              <ion-icon slot="icon-only" name="trash"></ion-icon>
-            </ion-item-option>
-          </ion-item-options>
-        </ion-item-sliding>
-      </ion-list>
-    </div>
-      <!-- Recents view -->
-    <div *ngIf="selectedSegment === 'recents'">
-      <div class="filter-options">
-        <ion-chip [color]="sourceFilter === 'all' ? 'primary' : 'medium'" (click)="filterBySource('all')">
-          <ion-label>All</ion-label>
-        </ion-chip>
-        <ion-chip [color]="sourceFilter === 'local' ? 'primary' : 'medium'" (click)="filterBySource('local')">
-          <ion-icon name="phone-portrait"></ion-icon>
-          <ion-label>Local</ion-label>
-        </ion-chip>
-        <ion-chip [color]="sourceFilter === 'stream' ? 'primary' : 'medium'" (click)="filterBySource('stream')">
-          <ion-icon name="cloud"></ion-icon>
-          <ion-label>Streamed</ion-label>
-        </ion-chip>
-        <ion-button size="small" fill="clear" (click)="refreshRecents()">
-          <ion-icon name="refresh-outline"></ion-icon>
-        </ion-button>
-      </div>
-      
-      <div class="empty-state" *ngIf="recentTracks.length === 0">
-        <ion-icon name="play-outline"></ion-icon>
-        <h3>No Recent Tracks</h3>
-        <p *ngIf="sourceFilter === 'local'">No local tracks have been played recently</p>
-        <p *ngIf="sourceFilter === 'stream'">No streaming tracks have been played recently</p>
-        <p *ngIf="sourceFilter === 'all'">Start by playing some music to see your recent tracks</p>
-        
-        <ion-button fill="clear" *ngIf="sourceFilter === 'local'" expand="block" (click)="navigateToUploads()">
-          <ion-icon slot="start" name="cloud-upload"></ion-icon>
-          Upload Music
-        </ion-button>
-        
-        <ion-button fill="clear" *ngIf="sourceFilter === 'stream'" expand="block" (click)="navigateToSearch()">
-          <ion-icon slot="start" name="search" fill="clear"></ion-icon>
-          Search Music
-        </ion-button>
-      </div>
-      
-      <ion-list *ngIf="recentTracks.length > 0">
-        <ion-item-sliding *ngFor="let track of recentTracks">
-          <ion-item button detail="false" (click)="playTrack(track)">
-            <ion-thumbnail slot="start">
-              <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
-            </ion-thumbnail>
-            <ion-label>
-              <h2>{{ track.title }}</h2>
-              <h3>{{ track.artist }}</h3>
-              <p>
-                <ion-text color="medium">{{ getTimeAgo(track.lastPlayed) }}</ion-text>
-                <ion-icon *ngIf="track.source === 'local'" name="phone-portrait-outline" color="medium"></ion-icon>
-                <ion-icon *ngIf="track.source === 'stream'" name="cloud-outline" color="medium"></ion-icon>
-              </p>
-            </ion-label>
-            <ion-button fill="clear" slot="end" (click)="$event.stopPropagation(); addToPlaylist(track)">
-              <ion-icon slot="icon-only" name="add"></ion-icon>
-            </ion-button>
-          </ion-item>
-          
-          <ion-item-options side="end">
-            <ion-item-option color="primary" (click)="addToPlaylist(track)">
-              <ion-icon slot="icon-only" name="add"></ion-icon>
-            </ion-item-option>
-            <ion-item-option color="danger" (click)="removeFromRecents(track)">
-              <ion-icon slot="icon-only" name="trash"></ion-icon>
-            </ion-item-option>
-          </ion-item-options>
-        </ion-item-sliding>
-      </ion-list>
-    </div>
-  </div>
 </ion-content>

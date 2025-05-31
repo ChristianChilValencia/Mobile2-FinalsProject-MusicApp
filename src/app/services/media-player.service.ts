@@ -241,24 +241,49 @@ export class MediaPlayerService {
     } catch (error) {
       console.error('Error updating track data:', error);
       // Continue playing even if data update fails
-    }
-
-    try {
+    }    try {
       if (track.isLocal) {
         const player = this.localAudioPlayer;
 
         if (Capacitor.isNativePlatform()) {
-          const audioSrc = Capacitor.convertFileSrc(track.previewUrl);
-          player.src = audioSrc;
-          player.load();
           try {
-            await player.play();
-            this.isPlaying$.next(true);
-            this.startUpdates();
-          } catch (playError) {
-            throw playError;
+            const audioSrc = Capacitor.convertFileSrc(track.previewUrl);
+            console.log('Playing native file with src:', audioSrc);
+            player.src = audioSrc;
+            player.load();
+            try {
+              await player.play();
+              this.isPlaying$.next(true);
+              this.startUpdates();
+            } catch (playError) {
+              console.error('Error playing native file:', playError);
+              throw playError;
+            }
+          } catch (srcError) {
+            console.error('Error setting source for native file:', srcError, track);
+            throw srcError;
           }
         } else {
+          try {
+            console.log('Playing web file with src:', track.previewUrl);
+            player.src = track.previewUrl;
+            player.load();
+            try {
+              await player.play();
+              this.isPlaying$.next(true);
+              this.startUpdates();
+            } catch (playError) {
+              console.error('Error playing web file:', playError);
+              throw playError;
+            }
+          } catch (srcError) {
+            console.error('Error setting source for web file:', srcError, track);
+            throw srcError;
+          }
+        }      } else {
+        const player = this.audioPlayer;
+        try {
+          console.log('Playing streaming file with src:', track.previewUrl);
           player.src = track.previewUrl;
           player.load();
           try {
@@ -266,19 +291,12 @@ export class MediaPlayerService {
             this.isPlaying$.next(true);
             this.startUpdates();
           } catch (playError) {
+            console.error('Error playing streaming file:', playError);
             throw playError;
           }
-        }
-      } else {
-        const player = this.audioPlayer;
-        player.src = track.previewUrl;
-        player.load();
-        try {
-          await player.play();
-          this.isPlaying$.next(true);
-          this.startUpdates();
-        } catch (playError) {
-          throw playError;
+        } catch (srcError) {
+          console.error('Error setting source for streaming file:', srcError, track);
+          throw srcError;
         }
       }
 
@@ -597,8 +615,7 @@ export class MediaPlayerService {
 
       tempAudio.preload = 'metadata';
       tempAudio.src = url;
-    });  }
-  async setQueue(tracks: Track[], startIndex = 0): Promise<void> {
+    });  }  async setQueue(tracks: Track[], startIndex = 0): Promise<void> {
     console.log(`Setting queue with ${tracks.length} tracks, starting at index ${startIndex}`);
     this.queue = tracks;
     this.queueIndex = startIndex;
@@ -610,11 +627,18 @@ export class MediaPlayerService {
           await this.dataService.addToRecentlyPlayed(tracks[startIndex].id);
         } catch (error) {
           console.error('Error adding track to history during setQueue:', error);
+          // Continue anyway
         }
       }
       
-      // Then play the track
-      await this.play(tracks[startIndex]);
+      // Then play the track with proper error handling
+      try {
+        console.log('Playing track from queue:', tracks[startIndex]);
+        await this.play(tracks[startIndex]);
+      } catch (error) {
+        console.error('Failed to play track from queue:', error);
+        throw error;
+      }
     }
   }
 

@@ -122,7 +122,6 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
               await this.dataService.removeTrackFromPlaylist(this.playlist!.id, track.id);
               // Reload the playlist
               await this.loadPlaylist(this.playlist!.id);
-              this.showToast('Track removed from playlist');
             } catch (error) {
               console.error('Error removing track:', error);
               this.showToast('Failed to remove track', 'danger');
@@ -152,7 +151,6 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
         this.playlist.updatedAt = new Date().toISOString();
         
         await this.dataService.savePlaylists([this.playlist]);
-        this.showToast('Playlist order updated');
       } catch (error) {
         console.error('Error updating playlist order:', error);
         this.showToast('Failed to update playlist order', 'danger');
@@ -247,7 +245,6 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
               
               // Reload the playlist
               await this.loadPlaylist(this.playlist!.id);
-              this.showToast('Playlist updated');
               return true;
             } catch (error) {
               console.error('Error updating playlist:', error);
@@ -279,7 +276,6 @@ export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playli
           handler: async () => {
             try {
               await this.dataService.deletePlaylist(this.playlist!.id);
-              this.showToast('Playlist deleted');
               this.navController.navigateBack('/tabs/library');
             } catch (error) {
               console.error('Error deleting playlist:', error);

@@ -164,19 +164,10 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     try {
       for (const file of files) {
         try {
-          const track = await this.audioService.addLocalTrack(file);
-          results.success++;
+          const track = await this.audioService.addLocalTrack(file);          results.success++;
           successfulTracks.push(track);
           
-          // Only show success toast for single file uploads
-          if (files.length === 1) {            const okToast = await this.toastCtrl.create({
-              message: `"${track.title}" uploaded successfully!`,
-              duration: 1500,
-              position: 'top',
-              color: 'success'
-            });
-            await okToast.present();
-          }
+          // Don't show success toast for single file uploads
         } catch (error) {
           results.failed++;
           console.error('Error processing file:', error);
@@ -202,15 +193,10 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
           color: results.failed ? 'warning' : 'success'
         });
         await summaryToast.present();
-      }
-
-      // Refresh the local music list to show the new tracks
+      }      // Refresh the local music list to show the new tracks
       await this.refreshLocalMusic();
 
-      // If we have successful uploads and it was a single file, start playing it
-      if (successfulTracks.length === 1 && files.length === 1) {
-        this.playTrack(successfulTracks[0]);
-      }
+      // Don't automatically play the uploaded track
 
     } catch (error) {
       console.error('Error in upload process:', error);
@@ -225,19 +211,20 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       await loading.dismiss();
       input.value = '';
     }
-  }
-  async playTrack(track: Track) {
+  }  async playTrack(track: Track) {
     try {
       // First add to recently played history
       await this.dataService.addToRecentlyPlayed(track.id);
-      // Then play the track
+      // Create a queue with just this track and play it
       await this.audioService.setQueue([track], 0);
+      // Navigate to the player page
       await this.router.navigate(['tabs/player']);
     } catch (error) {
       console.error('Error playing track:', error);
       const toast = await this.toastCtrl.create({
         message: 'Failed to play track',
         duration: 2000,
+        position: 'top',
         color: 'danger'
       });
       await toast.present();
@@ -252,18 +239,25 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       this.currentPlaybackState.isPlaying && 
       this.currentPlaybackState.currentTrack?.id === track.id
     );
-  }
-  
-  // Toggle play/pause for a track
-  togglePlayTrack(track: Track): void {
-    if (!this.currentPlaybackState) return;
-    
-    if (this.currentPlaybackState.currentTrack?.id === track.id) {
-      // The track is already the current track, toggle play/pause
-      this.audioService.togglePlay();
-    } else {
-      // It's a different track, start playing it
-      this.playTrack(track);
+  }  // Toggle play/pause for a track
+  async togglePlayTrack(track: Track): Promise<void> {
+    try {
+      if (this.currentPlaybackState && this.currentPlaybackState.currentTrack?.id === track.id) {
+        // The track is already the current track, toggle play/pause
+        await this.audioService.togglePlay();
+      } else {
+        // It's a different track, start playing it
+        await this.playTrack(track);
+      }
+    } catch (error) {
+      console.error('Error toggling play state:', error);
+      const toast = await this.toastCtrl.create({
+        message: 'Failed to play track',
+        duration: 2000,
+        position: 'top',
+        color: 'danger'
+      });
+      await toast.present();
     }
   }
 
@@ -394,8 +388,7 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       return false;
     }
   }
-  
-  // Show a toast message
+    // Show a toast message
   async showToast(message: string, color: string = 'success') {
     const toast = await this.toastCtrl.create({
       message,

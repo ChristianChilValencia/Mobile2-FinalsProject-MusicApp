@@ -18,14 +18,12 @@
       </ion-button>
     </div>
 
-    <!-- Empty State -->
     <div class="empty-state" *ngIf="localMusic.length === 0">
       <ion-icon name="musical-notes" size="large"></ion-icon>
       <h3>No local music found</h3>
       <p>Upload music files to get started</p>
     </div>
 
-    <!-- Track List -->
     <ion-list *ngIf="localMusic.length > 0">
       <h2 class="section-title">Your Music</h2>
       <ion-item-sliding *ngFor="let track of localMusic">
@@ -57,6 +55,5 @@
       </ion-item-sliding>
     </ion-list>
   </div>
+  <br><br><br><br><br>
 </ion-content>
-
-<!-- Removed mini-player from local-home since we're using the global mini-player component in tabs.page.html -->

@@ -194,7 +194,7 @@ export class MediaPlayerService {
         source: track.id.startsWith('deezer-') ? 'stream' as const : 'local' as const,
         addedAt: track.addedAt || now,
         lastPlayed: now,
-        artwork: track.artwork || track.imageUrl || 'assets/placeholder-album.png',
+        artwork: track.artwork || track.imageUrl || 'assets/placeholder-player.png',
         title: track.title || 'Unknown Title',
         artist: track.artist || 'Unknown Artist'
       };
@@ -540,7 +540,7 @@ export class MediaPlayerService {
         artist: trackArtist,
         album: trackArtist !== 'Unknown Artist' ? trackArtist : 'Local Music',
         duration: trackDuration,
-        imageUrl: 'assets/placeholder-album.png',
+        imageUrl: 'assets/placeholder-player.png',
         previewUrl: trackUri,
         spotifyId: '',
         liked: false,
@@ -549,7 +549,7 @@ export class MediaPlayerService {
         source: 'local',
         addedAt: new Date().toISOString(),
         type: trackFileExt,
-        artwork: 'assets/placeholder-album.png',
+        artwork: 'assets/placeholder-player.png',
         pathOrUrl: trackUri
       };
 

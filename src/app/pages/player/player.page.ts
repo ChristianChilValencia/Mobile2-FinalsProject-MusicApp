@@ -174,7 +174,12 @@ export class PlayerPage implements OnInit, OnDestroy {
         const artistName = track.artist || 'My';
         const mixName = `${artistName}'s Mix`;
         
-        this.dataService.createPlaylist(mixName)
+        // First ensure the track is saved properly
+        const filePath = track.pathOrUrl || track.previewUrl;
+        this.dataService.saveLocalMusic(track, filePath)
+          .then(() => {
+            return this.dataService.createPlaylist(mixName);
+          })
           .then(playlist => {
             return this.dataService.addTrackToPlaylist(playlist.id, track.id)
               .then(() => {
@@ -195,7 +200,10 @@ export class PlayerPage implements OnInit, OnDestroy {
         buttons.push({
           text: playlist.name,
           handler: () => {
-            this.dataService.addTrackToPlaylist(playlist.id, track.id)
+            // First ensure the track is saved properly
+            const filePath = track.pathOrUrl || track.previewUrl;
+            this.dataService.saveLocalMusic(track, filePath)
+              .then(() => this.dataService.addTrackToPlaylist(playlist.id, track.id))
               .then(() => this.showToast(`Added to ${playlist.name}`))
               .catch(err => this.showToast('Failed to add to playlist', 'danger'));
             return true;

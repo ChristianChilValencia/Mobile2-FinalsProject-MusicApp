@@ -34,7 +34,7 @@
         <div class="horizontal-scroll">
           <ion-card *ngFor="let track of trendingTracks" class="trending-card" (click)="playTrendingTrack(track)">
             <div class="card-image-container">
-              <img [src]="track.album.cover_medium || 'assets/placeholder-album.png'" alt="Album Art">
+              <img [src]="track.album.cover_medium || 'assets/placeholder-player.png'" alt="Album Art">
               <div class="play-overlay">
                 <ion-icon name="play-circle"></ion-icon>
               </div>
@@ -75,7 +75,7 @@
       <ion-list *ngIf="!loadingExplore && !exploreError && exploreTracks.length > 0" class="explore-list">
         <ion-item *ngFor="let track of exploreTracks" (click)="playExploreTrack(track)" button detail="false">
           <ion-thumbnail slot="start">
-            <img [src]="track.album.cover_medium || 'assets/placeholder-album.png'" alt="Album Art">
+            <img [src]="track.album.cover_medium || 'assets/placeholder-player.png'" alt="Album Art">
           </ion-thumbnail>
           <ion-label>
             <h2>{{ track.title }}</h2>

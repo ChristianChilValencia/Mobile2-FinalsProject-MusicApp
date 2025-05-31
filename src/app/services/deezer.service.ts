@@ -121,7 +121,7 @@ export class DeezerService {
   }
 
   private getDefaultCoverUrl(size: 'small' | 'medium' | 'big'): string {
-    const placeholder = 'assets/placeholder-album.png';
+    const placeholder = 'assets/placeholder-player.png';
     return placeholder;
   }
 
@@ -139,7 +139,7 @@ export class DeezerService {
       artist: deezerTrack.artist?.name || 'Unknown Artist',
       album: deezerTrack.album?.title || 'Unknown Album',
       duration: deezerTrack.duration || 0,
-      imageUrl: deezerTrack.album?.cover_medium || 'assets/placeholder-album.png',
+      imageUrl: deezerTrack.album?.cover_medium || 'assets/placeholder-player.png',
       previewUrl: deezerTrack.preview || '',
       spotifyId: '',
       liked: false,

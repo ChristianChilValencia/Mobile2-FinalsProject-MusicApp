@@ -107,6 +107,20 @@ ion-item {
   --padding-start: 8px;
   margin-bottom: 8px;
   border-radius: 8px;
+  
+  ion-thumbnail {
+    width: 56px;
+    height: 56px;
+    --border-radius: 4px;
+    padding: 3px;
+    
+    img {
+      border-radius: 4px;
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+    }
+  }
 }
 
 ion-label h2 {

@@ -35,7 +35,7 @@
     <ion-list *ngIf="searchResults.length > 0">
       <ion-item *ngFor="let track of searchResults" (click)="playTrack(track)" button detail="false">
         <ion-thumbnail slot="start">
-          <img [src]="track.artwork || 'assets/placeholder-album.png'" alt="Album Art">
+          <img [src]="track.artwork || 'assets/placeholder-player.png'" alt="Album Art">
         </ion-thumbnail>
         <ion-label>
           <h2>{{ track.title }}</h2>
@@ -53,4 +53,5 @@
       </ion-item>
     </ion-list>
   </div>
+  <br><br><br><br><br>
 </ion-content>

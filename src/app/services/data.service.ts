@@ -309,13 +309,12 @@ export class DataService {
         }
 
         // Ensure track has all required fields
-        const updatedTrack: Track = {
-          ...track,
+        const updatedTrack: Track = {          ...track,
           source: 'stream', // Always set stream for Deezer tracks
           addedAt: track.addedAt || new Date().toISOString(),
           artist: track.artist || 'Unknown Artist',
           title: track.title || 'Unknown Title',
-          artwork: track.artwork || 'assets/placeholder-album.png'
+          artwork: track.artwork || 'assets/placeholder-player.png'
         };
 
         // Save the updated track back to collection

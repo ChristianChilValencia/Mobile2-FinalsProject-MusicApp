@@ -389,10 +389,13 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     
     await actionSheet.present();
   }
-  
-  // Add a track to an existing playlist
+    // Add a track to an existing playlist
   async addTrackToExistingPlaylist(track: Track, playlistId: string) {
     try {
+      // First, make sure the track is saved in our data service
+      const filePath = track.pathOrUrl || track.previewUrl;
+      await this.dataService.saveLocalMusic(track, filePath);
+      
       // Ensure track is in collection
       await this.saveTrackIfNeeded(track);
       
@@ -408,10 +411,13 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       console.error('Error adding to playlist:', error);
       this.showToast('Failed to add to playlist', 'danger');
     }
-  }
-  // Create a custom playlist with a track
+  }  // Create a custom playlist with a track
   async createCustomPlaylistWithTrack(track: Track) {
     try {
+      // First, make sure the track is saved in our data service
+      const filePath = track.pathOrUrl || track.previewUrl;
+      await this.dataService.saveLocalMusic(track, filePath);
+      
       // Ensure track is in collection before continuing
       await this.saveTrackIfNeeded(track);
       
@@ -474,10 +480,13 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       console.error('Error preparing to create playlist:', error);
       this.showToast('Failed to prepare track', 'danger');
     }
-  }
-  // Create an artist mix playlist with a track
+  }  // Create an artist mix playlist with a track
   async createArtistMixWithTrack(track: Track) {
     try {
+      // First, make sure the track is saved in our data service
+      const filePath = track.pathOrUrl || track.previewUrl;
+      await this.dataService.saveLocalMusic(track, filePath);
+      
       // Ensure track exists in collection
       await this.saveTrackIfNeeded(track);
       

@@ -1,7 +1,7 @@
 <div class="mini-player" *ngIf="playbackState && playbackState.currentTrack && !isPlayerPage" (click)="openPlayerPage()">
   <div class="mini-player-container">
     <div class="track-info">
-      <img [src]="playbackState.currentTrack.artwork || playbackState.currentTrack.imageUrl || 'assets/placeholder-album.png'" alt="Album Art" class="album-art">
+      <img [src]="playbackState.currentTrack.artwork || playbackState.currentTrack.imageUrl || 'assets/placeholder-player.png'" alt="Album Art" class="album-art">
       <div class="details">
         <div class="title">{{ playbackState.currentTrack.title }}</div>
         <div class="artist">{{ playbackState.currentTrack.artist }}</div>

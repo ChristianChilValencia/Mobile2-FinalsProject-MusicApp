@@ -20,13 +20,13 @@
     align-items: center;
     flex: 1;
     overflow: hidden;
-    
-    .album-art {
+      .album-art {
       width: 40px;
       height: 40px;
       border-radius: 4px;
       object-fit: cover;
       margin-right: 12px;
+      padding: 2px; /* Smaller padding for the mini-player */
     }
     
     .details {

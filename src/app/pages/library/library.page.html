@@ -36,10 +36,11 @@
             <p>{{ playlist.trackIds.length }} {{ playlist.trackIds.length === 1 ? 'track' : 'tracks' }}</p>
           </ion-label>
         </ion-item>
-      </ion-list>       
+      </ion-list>      
+      <br><br><br><br><br>
 
       <!-- Floating action button for creating playlist -->
-      <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="selectedSegment === 'playlists'" style="bottom: 100px; right: 16px; position: fixed; z-index: 999;">
+      <ion-fab vertical="bottom" horizontal="end" slot="fixed" style="bottom: 100px; right: 16px; position: fixed; z-index: 999;">
         <ion-fab-button (click)="createPlaylist()">
           <ion-icon name="add"></ion-icon>
         </ion-fab-button>

@@ -11,13 +11,15 @@ import { DeezerService, DeezerTrack } from '../../services/deezer.service';
   styleUrls: ['./home.page.scss'],
   standalone: false
 })
-export class HomePage implements OnInit, OnDestroy {
-  currentMode = 'all';
+export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
   recentlyPlayed: Track[] = [];
   playlists: Playlist[] = [];
   trendingTracks: DeezerTrack[] = [];
+  exploreTracks: DeezerTrack[] = [];
   loadingTrending = false;
   trendingError = false;
+  loadingExplore = false;
+  exploreError = false;
   currentPlaybackState: PlaybackState | null = null;
   
   private tracksSubscription: Subscription | null = null;
@@ -31,12 +33,15 @@ export class HomePage implements OnInit, OnDestroy {
     private actionSheetController: ActionSheetController,
     private alertController: AlertController,
     private toastController: ToastController
-  ) {} 
-  ionViewWillEnter() {
+  ) {}   ionViewWillEnter() {
     this.dataService.refreshRecentlyPlayed();
     
     if (this.trendingTracks.length === 0 && !this.loadingTrending) {
       this.loadTrendingTracks();
+    }
+    
+    if (this.exploreTracks.length === 0 && !this.loadingExplore) {
+      this.loadExploreTracks();
     }
   }
   
@@ -70,7 +75,6 @@ export class HomePage implements OnInit, OnDestroy {
       this.playbackSubscription.unsubscribe();
     }
   }
-
   // Load trending tracks from Deezer
   loadTrendingTracks() {
     this.loadingTrending = true;
@@ -88,7 +92,27 @@ export class HomePage implements OnInit, OnDestroy {
         this.loadingTrending = false;
       }
     );
-  }  // Play a trending track
+  } 
+  
+  // Load explore tracks from Deezer
+  loadExploreTracks() {
+    this.loadingExplore = true;
+    this.exploreError = false;
+    
+    this.deezerService.getExploreTracks().subscribe(
+      tracks => {
+        this.exploreTracks = tracks.slice(0, 10); // Limit to 10 tracks
+        this.loadingExplore = false;
+        console.log('Loaded explore tracks:', this.exploreTracks);
+      },
+      error => {
+        console.error('Failed to load explore tracks:', error);
+        this.exploreError = true;
+        this.loadingExplore = false;
+      }
+    );
+  }
+    // Play a trending track
   async playTrendingTrack(track: DeezerTrack) {
     try {
       // Convert to our track format using the helper method
@@ -108,7 +132,31 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error playing trending track:', error);
       this.showToast('Could not play track', 'danger');
     }
-  }// Save a track if it doesn't exist in the database
+  }
+  
+  // Play an explore track
+  async playExploreTrack(track: DeezerTrack) {
+    try {
+      // Convert to our track format using the helper method
+      const trackToPlay = this.convertDeezerTrackToTrack(track);
+
+      // First ensure the track is saved to the database correctly
+      await this.saveTrackIfNeeded(trackToPlay);
+      
+      // Use the play method to play the track directly
+      await this.mediaPlayerService.play(trackToPlay);
+      
+      // Navigate to player after successfully starting playback
+      this.navCtrl.navigateForward('tabs/player');
+      
+      this.showToast(`Playing "${track.title}"`);
+    } catch (error) {
+      console.error('Error playing explore track:', error);
+      this.showToast('Could not play track', 'danger');
+    }
+  }
+  
+  // Save a track if it doesn't exist in the database
   private async saveTrackIfNeeded(track: Track): Promise<void> {
     try {
       const allTracks = await this.dataService.getAllTracks();
@@ -142,12 +190,12 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error saving track:', error);
       throw error; // Re-throw to handle in calling function
     }
-  }
-  refreshRecentlyPlayed(event: any) {
+  }  refreshRecentlyPlayed(event: any) {
     this.dataService.refreshRecentlyPlayed().then(() => {
-      // Only reload trending tracks if requested with the refresh control
+      // Only reload trending and explore tracks if requested with the refresh control
       if (event) {
         this.loadTrendingTracks();
+        this.loadExploreTracks();
         event.target.complete();
       }
     });
@@ -469,7 +517,7 @@ export class HomePage implements OnInit, OnDestroy {
       artist: track.artist?.name || 'Unknown Artist',
       album: track.album?.title || 'Unknown Album',
       duration: track.duration,
-      imageUrl: track.album?.cover_medium || 'assets/placeholder-album.png',
+      imageUrl: track.album?.cover_medium || 'assets/placeholder-player.png',
       previewUrl: track.preview,
       spotifyId: '',
       liked: false,

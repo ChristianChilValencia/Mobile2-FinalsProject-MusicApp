@@ -56,6 +56,11 @@ export class DeezerService {
     // Using search for popular terms as a reliable way to get trending-like tracks
     return this.searchPopularTerms();
   }
+
+  getExploreTracks(): Observable<DeezerTrack[]> {
+    // Using search for popular terms as a reliable way to get explore-like tracks
+    return this.searchExploreTerms();
+  }
   
   private searchPopularTerms(): Observable<DeezerTrack[]> {
     // Use some popular search terms as a fallback
@@ -75,6 +80,25 @@ export class DeezerService {
       catchError(this.handleError<DeezerTrack[]>('searchPopularTerms', []))
     );
   }
+
+  private searchExploreTerms(): Observable<DeezerTrack[]> {
+  // Use some popular search terms as a fallback
+  const exploreTerms = ['rock', 'jazz', 'hip hop', 'classical', 'chill', 'relax', 'electronic', 'pop', 'metal', 'reggae', 'blues', 'country'];
+  const randomTerm = exploreTerms[Math.floor(Math.random() * exploreTerms.length)];
+  
+  return this.http.get<any>(this.API_URL, {
+    headers: this.headers,
+    params: { q: randomTerm }
+  }).pipe(
+    map(response => {
+      if (response && response.data && Array.isArray(response.data)) {
+        return response.data.map((track: any) => this.enhanceTrackData(track));
+      }
+      return [];
+    }),
+    catchError(this.handleError<DeezerTrack[]>('searchExploreTerms', []))
+  );
+}
 
   private enhanceTrackData(track: any): DeezerTrack {
     // Add calculated properties or defaults

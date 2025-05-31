@@ -14,10 +14,7 @@
       refreshingSpinner="circles"
       refreshingText="Refreshing...">
     </ion-refresher-content>
-  </ion-refresher>
-
-  <div class="content-container">
-  
+  </ion-refresher>  <div class="content-container">    
     <h2>Trending Tracks</h2>
     <section class="music-section">            
       <div *ngIf="trendingError" class="status-message">
@@ -28,8 +25,55 @@
           Retry
         </ion-button>
       </div>
-      <ion-list *ngIf="!loadingTrending && !trendingError && trendingTracks.length > 0" class="trending-list">
-        <ion-item *ngFor="let track of trendingTracks" (click)="playTrendingTrack(track)" button detail="false">
+      <div *ngIf="loadingTrending" class="status-message">
+        <ion-spinner name="dots"></ion-spinner>
+        <p>Loading trending tracks...</p>
+      </div>
+      
+      <div *ngIf="!loadingTrending && !trendingError && trendingTracks.length > 0" class="trending-cards-container">
+        <div class="horizontal-scroll">
+          <ion-card *ngFor="let track of trendingTracks" class="trending-card" (click)="playTrendingTrack(track)">
+            <div class="card-image-container">
+              <img [src]="track.album.cover_medium || 'assets/placeholder-album.png'" alt="Album Art">
+              <div class="play-overlay">
+                <ion-icon name="play-circle"></ion-icon>
+              </div>
+            </div>
+            <ion-card-header>
+              <ion-card-title class="track-title">{{ track.title }}</ion-card-title>
+              <ion-card-subtitle>{{ track.artist.name }}</ion-card-subtitle>
+              <ion-card-subtitle *ngIf="track.album?.title" class="album-title">
+                  {{ track.album.title }}
+              </ion-card-subtitle>
+            </ion-card-header>
+          </ion-card>
+        </div>
+      </div>
+
+      <div *ngIf="!loadingTrending && !trendingError && trendingTracks.length === 0" class="status-message">
+        <ion-icon name="musical-notes-outline"></ion-icon>
+        <p>No trending tracks available</p>
+      </div>
+    </section>
+
+
+    <h2>Explore Tracks</h2>
+    <section class="music-section">
+      <div *ngIf="exploreError" class="status-message">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <p>Could not load explore tracks</p>
+        <ion-button fill="clear" (click)="loadExploreTracks()">
+          <ion-icon slot="start" name="refresh"></ion-icon>
+          Retry
+        </ion-button>
+      </div>
+      <div *ngIf="loadingExplore" class="status-message">
+        <ion-spinner name="dots"></ion-spinner>
+        <p>Loading explore tracks...</p>
+      </div>
+
+      <ion-list *ngIf="!loadingExplore && !exploreError && exploreTracks.length > 0" class="explore-list">
+        <ion-item *ngFor="let track of exploreTracks" (click)="playExploreTrack(track)" button detail="false">
           <ion-thumbnail slot="start">
             <img [src]="track.album.cover_medium || 'assets/placeholder-album.png'" alt="Album Art">
           </ion-thumbnail>
@@ -39,7 +83,7 @@
             <p *ngIf="track.album?.title">{{ track.album.title }}</p>
           </ion-label>        
           <div class="item-actions" slot="end">
-            <ion-button fill="clear" (click)="playTrendingTrack(track); $event.stopPropagation()">
+            <ion-button fill="clear" (click)="playExploreTrack(track); $event.stopPropagation()">
               <ion-icon slot="icon-only" name="play"></ion-icon>
             </ion-button>
             <ion-button fill="clear" (click)="addTrackToPlaylist(track); $event.stopPropagation()">
@@ -47,9 +91,11 @@
             </ion-button>
           </div>
         </ion-item>
-      </ion-list>      <div *ngIf="!loadingTrending && !trendingError && trendingTracks.length === 0" class="status-message">
+      </ion-list>
+         
+      <div *ngIf="!loadingExplore && !exploreError && exploreTracks.length === 0" class="status-message">
         <ion-icon name="musical-notes-outline"></ion-icon>
-        <p>No trending tracks available</p>
+        <p>No explore tracks available</p>
       </div>
     </section>
     <br><br><br><br>

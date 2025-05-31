@@ -35,3 +35,28 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+
+/* VibeFlow Global Mixins */
+@mixin text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin status-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+@mixin card-base {
+  margin: 0;
+  background: var(--ion-card-background);
+  border-radius: 12px;
+  overflow: hidden;
+}

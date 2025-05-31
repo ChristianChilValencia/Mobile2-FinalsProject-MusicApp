@@ -2,16 +2,17 @@
 .player-container{
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Changed from center to ensure content spreads out */
+  justify-content: space-between;
   align-items: center;
   height: 100%;
   min-height: 500px;
   background: linear-gradient(to bottom,var(--bg),#1e1e2f);
   color: var(--text);
   padding: 16px;
-  overflow-y: auto; /* Allow scrolling if needed */
+  overflow-y: auto;
   text-align: center;
 }
+
 .cover-art-container {
   width: 100%;
   display: flex;
@@ -20,39 +21,37 @@
   margin: 10px 0;
   flex-shrink: 0;
 }
+
 .cover-art {
-  width: min(280px, 80vw); /* Responsive width */
-  height: min(280px, 80vw); /* Keep it square */  max-height: 35vh; /* Limit height on smaller screens */
+  width: min(280px, 80vw);
+  height: min(280px, 80vw);
+  max-height: 35vh;
   max-width: 35vh;
-  border-radius: 50%; /* Make it circular */
+  border-radius: 50%;
   box-shadow: 0 15px 35px rgba(0,0,0,.5);
   overflow: hidden;
   transition: transform var(--speed);
-  padding: 5px;
+  
+  &.rotate {
+    animation: rotate 30s linear infinite;
+    animation-play-state: running;
+  }
+  
+  &:not(.rotate) {
+    animation-play-state: paused;
+  }
   
   img {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
     object-fit: cover;
+    border-radius: 50%;
   }
 }
-.cover-art.rotate {
-  animation: rotate 30s linear infinite;
-  animation-play-state: running;
-}
-.cover-art:not(.rotate) {
-  animation-play-state: paused;
-}
+
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-.cover-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%; /* Match parent's circular shape */
 }
 .track-info-container {
   width: 100%;
@@ -66,7 +65,31 @@
 .track-info {
   flex: 1;
   text-align: left;
-  min-width: 0; /* Allow text truncation to work */
+  min-width: 0;
+  
+  .title, .artist, .album {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .title {
+    font-size: clamp(1.2rem, 5vw, 1.8rem);
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,.3);
+  }
+  
+  .artist {
+    font-size: clamp(0.9rem, 4vw, 1.2rem);
+    opacity: .8;
+    margin-bottom: 8px;
+  }
+  
+  .album {
+    font-size: clamp(0.8rem, 3vw, 1rem);
+    opacity: .7;
+  }
   
   .track-details {
     display: flex;
@@ -76,53 +99,29 @@
     
     .track-metadata {
       flex: 1;
-      min-width: 0; /* Allow text truncation */
+      min-width: 0;
     }
   }
 }
-
 .add-playlist-button {
   --border-radius: 50%;
   --padding-start: 8px;
   --padding-end: 8px;
-  margin: 0;
+  margin: 0 0 0 12px;
   height: 36px;
-  margin-left: 12px;
   
   ion-icon {
     font-size: 20px;
   }
 }
-.title {
-  font-size: clamp(1.2rem, 5vw, 1.8rem);
-  font-weight: 700;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 4px rgba(0,0,0,.3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.artist {
-  font-size: clamp(0.9rem, 4vw, 1.2rem);
-  opacity: .8;
-  margin-bottom: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.album {
-  font-size: clamp(0.8rem, 3vw, 1rem);
-  opacity: .7;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+
 .seek-controls {
   width: 100%;
   padding: 0 16px;
   margin: 10px 0;
   flex-shrink: 0;
 }
+
 .time-display {
   display: flex;
   justify-content: space-between;
@@ -131,16 +130,18 @@
   margin-bottom: 4px;
   padding: 0 2px;
 }
+
 .current-time, .total-time {
-  min-width: 35px; /* Ensure minimum width for the time displays */
+  min-width: 35px;
   font-weight: 500;
 }
+
 .seek-bar {
   --bar-height: 4px;
   --bar-background: rgba(255, 255, 255, 0.2);
   --bar-background-active: var(--primary);
   --knob-background: var(--primary);
-  --knob-size: 14px; /* Slightly larger for better touch target */
+  --knob-size: 14px;
   --pin-background: var(--primary);
   --pin-color: var(--text);
 }
@@ -152,47 +153,46 @@
   width: 100%;
   flex-shrink: 0;
   position: relative;
-  padding-bottom: 16px; /* Add space for the skip labels */
+  padding-bottom: 16px;
 }
+
 .control-button {
   --padding-start: 8px;
   --padding-end: 8px;
   margin: 0 8px;
   height: 48px;
   position: relative;
-  min-width: 48px; /* Ensure minimum width */
+  min-width: 48px;
 }
+
 .play-button {
   --border-radius: 50%;
   --padding-start: 0;
   --padding-end: 0;
-  width: min(64px, 18vw); /* Responsive width */
-  height: min(64px, 18vw); /* Responsive height */
-  min-width: 48px; /* Minimum size */
+  width: min(64px, 18vw);
+  height: min(64px, 18vw);
+  min-width: 48px;
   min-height: 48px;
   font-size: clamp(1.5rem, 5vw, 2rem);
   margin: 0 16px;
   background: var(--primary);
   box-shadow: 0 0 15px rgba(142, 68, 173, 0.5);
 }
+
 .skip-label {
   position: absolute;
-  bottom: -12px; /* Moved down to be more visible */
+  bottom: -12px;
   left: 50%;
-  transform: translateX(-50%); /* Center it */
+  transform: translateX(-50%);
   font-size: 11px;
   font-weight: bold;
-  opacity: 1; /* Full opacity */
-  background-color: rgba(0, 0, 0, 0.2); /* Slight background for better visibility */
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.2);
   padding: 2px 4px;
   border-radius: 4px;
   white-space: nowrap;
 }
-.add-playlist {
-  margin-left: 10px;
-}
 
-/* Add responsive design adjustments */
 @media (max-height: 600px) {
   .player-container {
     justify-content: flex-start;
@@ -202,10 +202,7 @@
     max-height: 30vh;
     max-width: 30vh;
   }
-  
-  .track-info {
-    margin: 5px 0;
-  }
+}
   
   .seek-controls {
     margin: 5px 0;
@@ -214,7 +211,6 @@
   .playback-controls {
     margin: 5px 0 15px;
   }
-}
 
 /* Ensure content is visible on very small screens */
 @media (max-height: 500px) {

@@ -61,7 +61,7 @@
   }
 }
 
-// Lists and grids
+// Horizontal scrolling
 .horizontal-scroll {
   display: flex;
   overflow-x: auto;
@@ -73,113 +73,81 @@
   &::-webkit-scrollbar { display: none; }
 }
 
-.playlists-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 4px;
+// Cards sections
+.trending-cards-container, .explore-cards-container {
+  margin: 10px 0;
+  padding-bottom: 10px;
 }
 
-// Cards
-.track-card, .playlist-card {
+// Trending card styles
+.trending-card {
   @include card-base;
-  position: relative;
-  height: 100%;
+  min-width: 180px;
+  max-width: 200px;
+  margin: 0 8px 0 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
   
-  img {
+  &:active, &:hover {
+    transform: translateY(-5px);
+  }
+  
+  .card-image-container {
+    position: relative;
     width: 100%;
-    object-fit: cover;
+    height: 180px;
+    overflow: hidden;
+    
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .play-overlay {
+      @include flex-center;
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      
+      ion-icon {
+        font-size: 48px;
+        color: white;
+      }
+    }
+    
+    &:hover .play-overlay {
+      opacity: 1;
+    }
   }
   
   ion-card-header {
-    padding: 8px 12px;
+    padding: 12px;
     
-    ion-card-title {
+    ion-card-title.track-title {
       @include text-truncate;
       font-size: 16px;
+      font-weight: 600;
       margin: 0;
     }
     
     ion-card-subtitle {
+      @include text-truncate;
       font-size: 14px;
-      margin: 4px 0 0;
+      margin-top: 4px;
       color: var(--ion-color-medium);
+      
+      &.album-title {
+        font-size: 12px;
+      }
     }
   }
 }
 
-.track-card {
-  min-width: 140px;
-  max-width: 160px;
-  margin-right: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-
-  &:active { transform: scale(0.98); }
-  
-  img { height: 140px; }
-}
-
-.playlist-card img {
-  height: 250px;
-}
-
-// Media overlays
-.play-overlay {
-  @include flex-center;
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6));
-  opacity: 0;
-  transition: opacity 0.2s ease;
-
-  ion-icon {
-    font-size: 48px;
-    color: white;
-    opacity: 0.9;
-  }
-}
-
-.track-card:hover .play-overlay,
-.playlist-card:hover .play-overlay {
-  opacity: 1;
-}
-
-// Info sections
-.track-info, .playlist-info {
-  padding: 8px 12px;
-  background: var(--ion-card-background);
-
-  .title {
-    @include text-truncate;
-    font-weight: 600;
-    color: var(--ion-text-color);
-  }
-
-  .artist, .tracks-count {
-    @include text-truncate;
-    color: var(--ion-color-medium);
-  }
-}
-
-.track-info {
-  .title {
-    font-size: 14px;
-    margin-bottom: 2px;
-  }
-  .artist { font-size: 12px; }
-}
-
-.playlist-info {
-  .title {
-    font-size: 16px;
-    margin-bottom: 4px;
-  }
-  .tracks-count { font-size: 14px; }
-}
-
-// Trending & Explore lists
-.trending-list, .explore-list {
+// Explore list styles
+.explore-list {
   margin-top: 0;
   background: transparent;
   
@@ -188,7 +156,8 @@
     --inner-padding-end: 8px;
     margin-bottom: 8px;
     border-radius: 8px;
-      ion-thumbnail {
+    
+    ion-thumbnail {
       width: 56px;
       height: 56px;
       --border-radius: 4px;
@@ -211,6 +180,7 @@
       }
       
       h3, p {
+        @include text-truncate;
         color: var(--ion-color-medium);
       }
       
@@ -219,114 +189,23 @@
         margin-bottom: 2px;
       }
       
-      p { font-size: 12px; }
-    }
-  }
-}
-
-// Cards sections
-.explore-cards-container, .trending-cards-container {
-  margin: 10px 0;
-  padding-bottom: 10px;
-}
-
-.trending-card, .explore-card {
-  min-width: 180px;
-  max-width: 200px;
-  margin: 0 8px 0 0;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: transform 0.2s ease;
-  
-  &:active, &:hover {
-    transform: translateY(-5px);
-  }
-  
-  .card-image-container {
-    position: relative;
-    width: 100%;
-    height: 180px;
-    overflow: hidden;
-    
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .play-overlay {
-      @include flex-center;
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.3);
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      
-      ion-icon {
-        font-size: 48px;
-        color: white;
-      }
-    }
-    
-    &:hover .play-overlay {
-      opacity: 1;
-    }
-  }
-  
-  ion-card-header {
-    padding: 12px;
-    
-    .track-title {
-      @include text-truncate;
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-    }
-    
-    ion-card-subtitle {
-      @include text-truncate;
-      font-size: 14px;
-      margin-top: 4px;
-    }
-  }
-  
-  ion-card-content {
-    padding: 0 12px 12px;
-    
-    &.album-title {
-      @include text-truncate;
-      font-size: 12px;
-      color: var(--ion-color-medium);
-    }
-  }
-  
-  .card-actions {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 8px 8px;
-    
-    ion-button {
-      --padding-start: 8px;
-      --padding-end: 8px;
-      
-      ion-icon {
-        font-size: 20px;
+      p {
+        font-size: 12px;
       }
     }
   }
 }
 
-.item-actions ion-button {
-  --padding-start: 4px;
-  --padding-end: 4px;
-  margin: 0;
-  
-  ion-icon {
-    color: var(--ion-color-primary);
-    font-size: 20px;
+// Item actions
+.item-actions {
+  ion-button {
+    --padding-start: 4px;
+    --padding-end: 4px;
+    margin: 0;
+    
+    ion-icon {
+      color: var(--ion-color-primary);
+      font-size: 20px;
+    }
   }
 }

@@ -87,6 +87,39 @@ export class DataService {
     this.initRecentlyPlayed();
   }
 
+  // Add a method to run database migrations
+  private async runDatabaseMigrations(): Promise<void> {
+    try {
+      if (!this.db) {
+        console.error('Database not initialized');
+        return;
+      }
+
+      console.log('Running database migrations...');
+      
+      // Check if last_played column exists
+      const tableInfo = await this.db.query("PRAGMA table_info(tracks);");
+      const columns = tableInfo.values || [];
+      const columnNames = columns.map((col: any) => col.name);
+      
+      // Add last_played column if it doesn't exist
+      if (!columnNames.includes('last_played')) {
+        console.log('Adding last_played column to tracks table');
+        await this.db.execute('ALTER TABLE tracks ADD COLUMN last_played TEXT;');
+      }
+      
+      // Add added_at column if it doesn't exist
+      if (!columnNames.includes('added_at')) {
+        console.log('Adding added_at column to tracks table');
+        await this.db.execute('ALTER TABLE tracks ADD COLUMN added_at TEXT;');
+      }
+      
+      console.log('Database migrations completed');
+    } catch (error) {
+      console.error('Error running database migrations:', error);
+    }
+  }
+
   // Initialize recently played tracks from storage
   private async initRecentlyPlayed(): Promise<void> {
     try {
@@ -98,9 +131,7 @@ export class DataService {
   }
 
   async ensureInit(): Promise<void> {
-    if (this._initPromise) return this._initPromise;
-    
-    this._initPromise = (async () => {
+    if (this._initPromise) return this._initPromise;        this._initPromise = (async () => {
       try {
         await this.platform.ready();
         
@@ -114,6 +145,7 @@ export class DataService {
         }
         await this.db.open();
 
+        // First, create tables if they don't exist
         const sql = `
           CREATE TABLE IF NOT EXISTS playlists (
             id           TEXT PRIMARY KEY,
@@ -148,7 +180,9 @@ export class DataService {
             spotify_id   TEXT,
             liked        INTEGER DEFAULT 0,
             is_local     INTEGER DEFAULT 0,
-            source       TEXT CHECK(source IN ('local', 'stream')) DEFAULT 'stream'
+            source       TEXT CHECK(source IN ('local', 'stream')) DEFAULT 'stream',
+            last_played  TEXT,
+            added_at     TEXT
           );
 
           CREATE TABLE IF NOT EXISTS liked_music (
@@ -164,6 +198,9 @@ export class DataService {
           );`;
 
         await this.db.execute(sql);
+        
+        // Run database migration to add missing columns if they don't exist
+        await this.runDatabaseMigrations();
         
         // Load local tracks from SQLite
         if (this.platform.is('hybrid')) {
@@ -245,14 +282,13 @@ export class DataService {
       // Save to SQLite
       if (this.platform.is('hybrid')) {
         await this.ensureInit();
-        
-        // Save track data
+          // Save track data
         await this.db.run(
           `INSERT OR REPLACE INTO tracks (
             id, title, artist, album, duration,
             image_url, preview_url, spotify_id,
-            liked, is_local, source
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+            liked, is_local, source, added_at, last_played
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
           [
             localTrack.id,
             localTrack.title,
@@ -264,7 +300,9 @@ export class DataService {
             localTrack.spotifyId,
             localTrack.liked ? 1 : 0,
             1,
-            'local'
+            'local',
+            localTrack.addedAt || new Date().toISOString(),
+            localTrack.lastPlayed || null
           ]
         );
         
@@ -340,15 +378,25 @@ export class DataService {
       // Update the tracks collection
       const freshTracks = tracks.map(t => t.id === trackId ? updatedTrack : t);
       this.tracksSubject.next(freshTracks);
-      await this.saveTracks(freshTracks);
-
-      // Update SQLite if on mobile
+      await this.saveTracks(freshTracks);      // Update SQLite if on mobile
       if (this.platform.is('hybrid')) {
-        await this.ensureInit();
-        await this.db.run(
-          `UPDATE tracks SET last_played = ? WHERE id = ?;`,
-          [updatedTrack.lastPlayed, trackId]
-        );
+        try {
+          await this.ensureInit();
+          
+          // Make sure the last_played column exists
+          await this.runDatabaseMigrations();
+          
+          // Update the last_played field
+          await this.db.run(
+            `UPDATE tracks SET last_played = ? WHERE id = ?;`,
+            [updatedTrack.lastPlayed, trackId]
+          );
+          console.log(`Successfully updated last_played in database for track ${trackId}`);
+        } catch (error) {
+          // Handle the error but don't fail the whole operation
+          console.error('Error updating last_played in database:', error);
+          // Continue with the rest of the function
+        }
       }
 
       // Get current recently played IDs
@@ -443,6 +491,43 @@ export class DataService {
       this.tracksSubject.next(tracks);
     } catch (error) {
       console.error('Error loading tracks:', error);
+    }
+  }  // Add a method to reset the database in case of corruption
+  async resetDatabase(): Promise<void> {
+    try {
+      if (!this.platform.is('hybrid')) {
+        console.log('Reset database only applies to mobile platforms');
+        return;
+      }
+      
+      console.log('Attempting to reset database...');
+      
+      // Close any existing connection
+      if (this.db) {
+        try {
+          await this.db.close();
+          console.log('Database connection closed');
+        } catch (err) {
+          console.error('Error closing db connection:', err);
+        }
+      }
+      
+      // Force a clean initialization
+      this._initPromise = null;
+      await this.ensureInit();
+      
+      // Run migrations to ensure all columns exist
+      await this.runDatabaseMigrations();
+      
+      console.log('Database reset completed');
+      
+      // Reload data
+      await this.loadTracks();
+      await this.loadPlaylists();
+      await this.initRecentlyPlayed();
+    } catch (error) {
+      console.error('Error resetting database:', error);
+      throw error;
     }
   }
 

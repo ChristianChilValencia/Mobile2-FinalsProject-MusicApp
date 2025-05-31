@@ -124,10 +124,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       // Use the play method to play the track directly
       await this.mediaPlayerService.play(trackToPlay);
       
-      // Navigate to player after successfully starting playback
-      this.navCtrl.navigateForward('tabs/player');
-      
-      this.showToast(`Playing "${track.title}"`);
     } catch (error) {
       console.error('Error playing trending track:', error);
       this.showToast('Could not play track', 'danger');
@@ -146,10 +142,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       // Use the play method to play the track directly
       await this.mediaPlayerService.play(trackToPlay);
       
-      // Navigate to player after successfully starting playback
-      this.navCtrl.navigateForward('tabs/player');
-      
-      this.showToast(`Playing "${track.title}"`);
     } catch (error) {
       console.error('Error playing explore track:', error);
       this.showToast('Could not play track', 'danger');
@@ -222,69 +214,13 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       console.error('Error playing track:', error);
     }
   }
-
-  openPlaylist(playlist: Playlist) {
-    this.navCtrl.navigateForward(`/tabs/playlist/${playlist.id}`);
-  }
-  navigateToUploads() {
-    this.navCtrl.navigateForward('/tabs/uploads');
-  }
-
-  navigateToSearch() {
-    this.navCtrl.navigateForward('/tabs/search');
-  }
   // No need for reversedRecentlyPlayed getter since we want newest first
 
   getFirstTrackArtwork(playlist: Playlist): string {
     const firstTrack = this.recentlyPlayed.find(track => track.id === playlist.trackIds[0]);
     return firstTrack?.artwork || firstTrack?.imageUrl || 'assets/placeholder-playlist.png';
   }
-  async presentActionSheet() {
-    const buttons: ActionSheetButton[] = [
-      {
-        text: 'Upload Music',
-        handler: () => {
-          this.navigateToUploads();
-          return true;
-        }
-      },
-      {
-        text: 'Search Music',
-        handler: () => {
-          this.navigateToSearch();
-          return true;
-        }
-      },
-      {
-        text: 'Your Library',
-        handler: () => {
-          this.navCtrl.navigateForward('/tabs/library');
-          return true;
-        }
-      },
-      {
-        text: 'Create Playlist',
-        handler: () => {
-          this.navCtrl.navigateForward('/tabs/library');
-          // We'll need to implement this properly with the DataService
-          return true;
-        }
-      },
-      {
-        text: 'Cancel',
-        role: 'cancel'
-      }
-    ];
-    
-    const actionSheet = await this.actionSheetController.create({
-      header: 'Options',
-      buttons
-    });
-    
-    await actionSheet.present();
-  }
 
-  // Check if a track is currently playing
   isCurrentlyPlaying(track: Track): boolean {
     if (!this.currentPlaybackState) return false;
     
@@ -335,7 +271,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       await this.showAddToPlaylistOptions(trackToAdd);
     } catch (error) {
       console.error('Error preparing to add track to playlist:', error);
-      this.showToast('Failed to prepare track', 'danger');
     }
   }
   
@@ -409,7 +344,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       this.showToast(`Added to ${playlistName}`);
     } catch (error) {
       console.error('Error adding to playlist:', error);
-      this.showToast('Failed to add to playlist', 'danger');
     }
   }  // Create a custom playlist with a track
   async createCustomPlaylistWithTrack(track: Track) {
@@ -467,7 +401,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
                 return true;
               } catch (error) {
                 console.error('Error creating playlist:', error);
-                this.showToast('Failed to create playlist', 'danger');
                 return false;
               }
             }
@@ -478,7 +411,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       await alert.present();
     } catch (error) {
       console.error('Error preparing to create playlist:', error);
-      this.showToast('Failed to prepare track', 'danger');
     }
   }  // Create an artist mix playlist with a track
   async createArtistMixWithTrack(track: Track) {
@@ -503,7 +435,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       this.showToast(`Created artist mix: ${mixName}`);
     } catch (error) {
       console.error('Error creating artist mix:', error);
-      this.showToast('Failed to create artist mix', 'danger');
     }
   }
 

@@ -17,7 +17,9 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 })
 export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
   // Local music state
-  localMusic: Track[] = [];  isDarkMode = false;
+  localMusic: Track[] = [];  
+  isDarkMode = false;
+  showRepairOption = true; // Show repair option by default
   private settingsSub?: Subscription;
 
   // Current playback state
@@ -103,7 +105,38 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  }  private async refreshLocalMusic() {
+  }
+
+  async doRefresh(event: any) {
+    try {
+      await this.refreshLocalMusic();
+      // Show a success toast
+      const toast = await this.toastCtrl.create({
+        message: 'Music library refreshed',
+        duration: 2000,
+        position: 'top',
+        color: 'success'
+      });
+      await toast.present();
+    } catch (error) {
+      console.error('Error refreshing library:', error);
+      // Show an error toast
+      const toast = await this.toastCtrl.create({
+        message: 'Failed to refresh music library',
+        duration: 2000,
+        position: 'top',
+        color: 'danger'
+      });
+      await toast.present();
+    } finally {
+      // Complete the refresher
+      if (event) {
+        event.target.complete();
+      }
+    }
+  }
+  
+  private async refreshLocalMusic() {
     try {
       // Get only local tracks (strict matching for source and isLocal)
       const allTracks = await this.dataService.getAllTracks();
@@ -438,6 +471,45 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       buttons
     });
     
-    await actionSheet.present();
+    await actionSheet.present();  }
+
+  // Repair the database
+  async repairDatabase() {
+    const alert = await this.alertCtrl.create({
+      header: 'Repair Database',
+      message: 'This will attempt to repair any issues with the music database.',
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'Repair',
+          handler: async () => {
+            const loading = await this.loadingCtrl.create({
+              message: 'Repairing database...',
+            });
+            await loading.present();
+            
+            try {
+              // Perform the repair operation
+              await this.dataService.resetDatabase();
+              
+              this.showToast('Database repaired successfully');
+              
+              // Refresh the local music list
+              await this.refreshLocalMusic();
+            } catch (error) {
+              console.error('Error repairing database:', error);
+              this.showToast('Failed to repair database', 'danger');
+            } finally {
+              await loading.dismiss();
+            }
+          }
+        }
+      ]
+    });
+    
+    await alert.present();
   }
 }

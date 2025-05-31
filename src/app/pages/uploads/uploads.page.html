@@ -4,6 +4,14 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" [class.dark-mode]="isDarkMode" class="ion-padding-bottom">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="circles"
+      refreshingText="Refreshing...">
+    </ion-refresher-content>
+  </ion-refresher>
   <input type="file" #fileInput style="display:none" 
          accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.opus" 
          multiple (change)="onFileSelected($event)">
@@ -11,12 +19,11 @@
     <!-- Upload Section -->
     <div class="upload-header">
       <h2>Add Local Audio Files</h2>
-      <p>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</p>
-      <ion-button expand="block" fill="clear" (click)="requestAudioPermissions(); openFileSelector()" class="upload-area">
+      <p>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</p>    <ion-button expand="block" fill="clear" (click)="requestAudioPermissions(); openFileSelector()" class="upload-area">
         <ion-icon slot="start" name="cloud-upload"></ion-icon>
-        Tap to select files
+        Tap to select files    
       </ion-button>
-    </div>
+  </div>
 
     <div class="empty-state" *ngIf="localMusic.length === 0">
       <ion-icon name="musical-notes" size="large"></ion-icon>

@@ -33,10 +33,8 @@ export class HomePage implements OnInit, OnDestroy {
     private toastController: ToastController
   ) {} 
   ionViewWillEnter() {
-    // Refresh recently played tracks when entering the home page
     this.dataService.refreshRecentlyPlayed();
     
-    // Only load trending tracks if we don't have any yet
     if (this.trendingTracks.length === 0 && !this.loadingTrending) {
       this.loadTrendingTracks();
     }

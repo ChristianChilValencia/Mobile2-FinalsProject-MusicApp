@@ -31,7 +31,7 @@
       <ion-item-sliding *ngFor="let track of localMusic">
         <ion-item button detail="false" (click)="playTrack(track)">
           <ion-thumbnail slot="start">
-            <img [src]="track.artwork || track.imageUrl || 'assets/placeholder-album.png'" [alt]="track.title">
+            <img [src]="track.artwork || track.imageUrl || 'assets/placeholder-player.png'" [alt]="track.title">
           </ion-thumbnail>
           <ion-label>
             <h2>{{ track.title }}</h2>

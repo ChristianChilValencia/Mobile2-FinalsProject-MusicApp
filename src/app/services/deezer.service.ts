@@ -50,7 +50,9 @@ export class DeezerService {
         return [];
       })
     );
-  }  getTrendingTracks(): Observable<DeezerTrack[]> {
+  }  
+  
+  getTrendingTracks(): Observable<DeezerTrack[]> {
     // Using search for popular terms as a reliable way to get trending-like tracks
     return this.searchPopularTerms();
   }

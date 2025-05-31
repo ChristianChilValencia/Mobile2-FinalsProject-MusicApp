@@ -105,9 +105,9 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }  private async refreshLocalMusic() {
     try {
-      // Get only local tracks
+      // Get only local tracks (strict matching for source and isLocal)
       const allTracks = await this.dataService.getAllTracks();
-      const localTracks = allTracks.filter(track => track.source === 'local');
+      const localTracks = allTracks.filter(track => track.source === 'local' && track.isLocal === true);
       
       // Sort by upload date (newest first)
       this.localMusic = localTracks.sort((a, b) => {
@@ -232,7 +232,7 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       await this.dataService.addToRecentlyPlayed(track.id);
       // Then play the track
       await this.audioService.setQueue([track], 0);
-      await this.router.navigate(['/player']);
+      await this.router.navigate(['tabs/player']);
     } catch (error) {
       console.error('Error playing track:', error);
       const toast = await this.toastCtrl.create({

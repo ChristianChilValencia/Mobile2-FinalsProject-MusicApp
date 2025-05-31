@@ -63,92 +63,83 @@ export class MediaPlayerService {
     this.configureAudioElement(this.audioPlayer);
     this.configureAudioElement(this.localAudioPlayer);
     this.setupAudioEvents();
+
+    // Set up state change subscriptions
+    this.currentTrack$.subscribe(() => this.updatePlaybackState());
+    this.isPlaying$.subscribe(() => this.updatePlaybackState());
+    this.currentTime$.subscribe(() => this.updatePlaybackState());
+    this.duration$.subscribe(() => this.updatePlaybackState());
   }
 
   private configureAudioElement(audio: HTMLAudioElement) {
     audio.autoplay = false;
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
-    audio.volume = 1.0;
+    audio.volume = this.volume;
   }  private setupAudioEvents() {
-    this.audioPlayer.addEventListener('loadedmetadata', () => {
-      // For streamed songs, cap at 30 seconds
-      if (!this.currentTrack$.getValue()?.isLocal) {
-        this.duration$.next(30); // Cap at 30 seconds for streamed tracks
-      } else {
-        this.duration$.next(this.audioPlayer.duration);
-      }
-      this._trackReady = true;
-      this.updatePlaybackState(); // Update state when metadata is loaded
-    });
+    // Common event handler setup for both players
+    [this.audioPlayer, this.localAudioPlayer].forEach(player => {
+      player.addEventListener('loadedmetadata', () => {
+        const isStreamedTrack = player === this.audioPlayer && !this.currentTrack$.getValue()?.isLocal;
+        this.duration$.next(isStreamedTrack ? 30 : player.duration);
+        this._trackReady = true;
+        this.updatePlaybackState();
+      });
 
-    this.audioPlayer.addEventListener('timeupdate', () => {
-      const currentTrack = this.currentTrack$.getValue();
-      if (currentTrack && !currentTrack.isLocal && this.audioPlayer.currentTime > 30) {
-        // For streamed tracks, enforce 30 second limit
-        this.audioPlayer.pause();
+      player.addEventListener('timeupdate', () => {
+        const currentTrack = this.currentTrack$.getValue();
+        const isStreamedTrack = player === this.audioPlayer && !currentTrack?.isLocal;
+        
+        if (isStreamedTrack && player.currentTime > 30) {
+          player.pause();
+          this.isPlaying$.next(false);
+          this.currentTime$.next(30);
+          this.stopUpdates();
+          this.next();
+        } else {
+          this.currentTime$.next(player.currentTime);
+          this.updatePlaybackState();
+        }
+      });
+
+      player.addEventListener('play', () => {
+        this.isPlaying$.next(true);
+        this.startUpdates();
+        this.updatePlaybackState();
+      });
+
+      player.addEventListener('pause', () => {
         this.isPlaying$.next(false);
-        this.currentTime$.next(30);
         this.stopUpdates();
-        // Move to next track if available
-        this.next();
-      } else {
-        this.currentTime$.next(this.audioPlayer.currentTime);
-        this.updatePlaybackState(); // Update state during playback for smooth progress bar
-      }
-    });    this.audioPlayer.addEventListener('play', () => {
-      this.isPlaying$.next(true);
-      this.startUpdates();
-    });    this.audioPlayer.addEventListener('pause', () => {
-      this.isPlaying$.next(false);
-      this.stopUpdates();
-      this.updatePlaybackState(); // Update state when paused
-    });
+        this.updatePlaybackState();
+      });
 
-    this.audioPlayer.addEventListener('ended', async () => {
-      // Refresh recently played list when track ends
-      const currentTrack = this.currentTrack$.value;
-      if (currentTrack) {
-        try {
-          await this.dataService.refreshRecentlyPlayed();
-        } catch (error) {
-          console.error('Error refreshing history on track end:', error);
+      player.addEventListener('ended', async () => {
+        const currentTrack = this.currentTrack$.getValue();
+        if (currentTrack) {
+          try {
+            await this.dataService.refreshRecentlyPlayed();
+          } catch (error) {
+            console.error('Error refreshing history on track end:', error);
+          }
+          
+          // Handle repeat modes
+          if (this.repeatMode === RepeatMode.One && currentTrack) {
+            await this.play(currentTrack);
+          } else if (this.repeatMode === RepeatMode.All || this.queue.length > 0) {
+            await this.next();
+          } else {
+            this.cleanup();
+            this.updatePlaybackState();
+          }
         }
-      }
-      this.next();
-    });
-    
-    this.localAudioPlayer.addEventListener('loadedmetadata', () => {
-      // For local files, use the actual duration
-      this.duration$.next(this.localAudioPlayer.duration);
-      this._trackReady = true;
-      this.updatePlaybackState(); // Update state when metadata is loaded
-    });
+      });
 
-    this.localAudioPlayer.addEventListener('timeupdate', () => {
-      this.currentTime$.next(this.localAudioPlayer.currentTime);
-      this.updatePlaybackState(); // Update state during playback for smooth progress bar
-    });
-
-    this.localAudioPlayer.addEventListener('play', () => {
-      this.isPlaying$.next(true);
-      this.startUpdates();
-    });    this.localAudioPlayer.addEventListener('pause', () => {
-      this.isPlaying$.next(false);
-      this.stopUpdates();
-    });
-
-    this.localAudioPlayer.addEventListener('ended', async () => {
-      // Refresh recently played list when track ends
-      const currentTrack = this.currentTrack$.value;
-      if (currentTrack) {
-        try {
-          await this.dataService.refreshRecentlyPlayed();
-        } catch (error) {
-          console.error('Error refreshing history on track end:', error);
-        }
-      }
-      this.next();
+      player.addEventListener('error', (e) => {
+        console.error('Audio player error:', e);
+        this.cleanup();
+        this.updatePlaybackState();
+      });
     });
   }
 
@@ -156,14 +147,18 @@ export class MediaPlayerService {
     this.stopUpdates();
     this.timerId = setInterval(() => {
       const activePlayer = this.getCurrentPlayer();
-      this.currentTime$.next(activePlayer.currentTime);
-    }, 500);
+      if (activePlayer && !activePlayer.paused) {
+        this.currentTime$.next(activePlayer.currentTime);
+        this.updatePlaybackState();
+      }
+    }, 250); // Reduced interval for smoother updates
   }
 
   private stopUpdates() {
     if (this.timerId) {
       clearInterval(this.timerId);
       this.timerId = null;
+      this.updatePlaybackState();
     }
   }
 
@@ -171,24 +166,21 @@ export class MediaPlayerService {
     const track = this.currentTrack$.getValue();
     return track?.isLocal ? this.localAudioPlayer : this.audioPlayer;
   }  async play(track?: Track): Promise<void> {
-    if (!track) {
-      // Resume current track
-      const currentTrack = this.currentTrack$.value;
-      if (!currentTrack) {
-        throw new Error('No track to play');
-      }
-      return this.resume();
-    }
-    
-    this.cleanup();
-    this.currentTrack$.next(track);
-    this.updatePlaybackState(); // Update state when track changes
-
     try {
-      // Update lastPlayed timestamp
-      const now = new Date().toISOString();
+      if (!track) {
+        const currentTrack = this.currentTrack$.value;
+        if (!currentTrack) {
+          throw new Error('No track to play');
+        }
+        return this.resume();
+      }
       
-      // Ensure track has all required fields
+      this.cleanup();
+      this.currentTrack$.next(track);
+      this.updatePlaybackState();
+
+      // Update track metadata
+      const now = new Date().toISOString();
       const trackToSave: Track = {
         ...track,
         source: track.id.startsWith('deezer-') ? 'stream' as const : 'local' as const,
@@ -199,110 +191,39 @@ export class MediaPlayerService {
         artist: track.artist || 'Unknown Artist'
       };
 
-      // Ensure track is in collection first
-      const allTracks = await this.dataService.getAllTracks();
-      const existingTrack = allTracks.find(t => t.id === track.id);
-      
-      let tracksToSave: Track[];
-      if (existingTrack) {
-        // Update existing track
-        tracksToSave = allTracks.map(t => 
-          t.id === track.id ? {
-            ...t,
-            ...trackToSave // Keep all new track data
-          } : t
-        );
-      } else {
-        // Add new track
-        tracksToSave = [...allTracks, trackToSave];
+      try {
+        // Save track metadata
+        await this.dataService.saveTracks([trackToSave]);
+        await this.dataService.addToRecentlyPlayed(track.id);
+      } catch (error) {
+        console.error('Error saving track metadata:', error);
+        // Continue playing even if metadata save fails
       }
-      
-      // Save tracks first and wait for it to complete
-      await this.dataService.saveTracks(tracksToSave);
-      
-      // Verify track was saved by fetching fresh data
-      const verifyTracks = await this.dataService.getAllTracks();
-      const verifyTrack = verifyTracks.find(t => t.id === track.id);
-      
-      if (!verifyTrack) {
-        console.error(`Failed to save track ${track.id} to collection`);
-        // Continue anyway, but log the error
-      } else {
-        console.log(`Successfully saved track ${track.id} to collection`);
+
+      // Set up audio source
+      const player = track.isLocal ? this.localAudioPlayer : this.audioPlayer;
+      const audioSrc = this.platform.is('hybrid') ? 
+        Capacitor.convertFileSrc(track.previewUrl) : 
+        track.previewUrl;
+
+      try {
+        // Load and play the track
+        console.log(`Playing ${track.isLocal ? 'local' : 'streaming'} file:`, audioSrc);
+        player.src = audioSrc;
+        player.load();
+        await player.play();
         
-        // Then add to recently played history
-        try {
-          await this.dataService.addToRecentlyPlayed(track.id);
-        } catch (error) {
-          console.error('Error updating track history:', error);
-          // Continue playing even if history fails
-        }
+        this.isPlaying$.next(true);
+        this.startUpdates();
+        await this.dataService.set('last_played_track', track);
+      } catch (error) {
+        console.error('Error playing track:', error);
+        this.cleanup();
+        throw error;
       }
     } catch (error) {
-      console.error('Error updating track data:', error);
-      // Continue playing even if data update fails
-    }    try {
-      if (track.isLocal) {
-        const player = this.localAudioPlayer;
-
-        if (Capacitor.isNativePlatform()) {
-          try {
-            const audioSrc = Capacitor.convertFileSrc(track.previewUrl);
-            console.log('Playing native file with src:', audioSrc);
-            player.src = audioSrc;
-            player.load();
-            try {
-              await player.play();
-              this.isPlaying$.next(true);
-              this.startUpdates();
-            } catch (playError) {
-              console.error('Error playing native file:', playError);
-              throw playError;
-            }
-          } catch (srcError) {
-            console.error('Error setting source for native file:', srcError, track);
-            throw srcError;
-          }
-        } else {
-          try {
-            console.log('Playing web file with src:', track.previewUrl);
-            player.src = track.previewUrl;
-            player.load();
-            try {
-              await player.play();
-              this.isPlaying$.next(true);
-              this.startUpdates();
-            } catch (playError) {
-              console.error('Error playing web file:', playError);
-              throw playError;
-            }
-          } catch (srcError) {
-            console.error('Error setting source for web file:', srcError, track);
-            throw srcError;
-          }
-        }      } else {
-        const player = this.audioPlayer;
-        try {
-          console.log('Playing streaming file with src:', track.previewUrl);
-          player.src = track.previewUrl;
-          player.load();
-          try {
-            await player.play();
-            this.isPlaying$.next(true);
-            this.startUpdates();
-          } catch (playError) {
-            console.error('Error playing streaming file:', playError);
-            throw playError;
-          }
-        } catch (srcError) {
-          console.error('Error setting source for streaming file:', srcError, track);
-          throw srcError;
-        }
-      }
-
-      await this.dataService.set('last_played_track', track);
-    } catch (error) {
-      console.error('Error playing track:', error);
+      console.error('Error in play method:', error);
+      this.cleanup();
       throw error;
     }
   }
@@ -438,19 +359,20 @@ export class MediaPlayerService {
   }
 
   cleanup(): void {
-    this.audioPlayer.pause();
-    this.localAudioPlayer.pause();
-    this.audioPlayer.currentTime = 0;
-    this.localAudioPlayer.currentTime = 0;
+    this.stopUpdates();
+    [this.audioPlayer, this.localAudioPlayer].forEach(player => {
+      player.pause();
+      player.currentTime = 0;
+    });
+    
     if (this._currentBlobUrl) {
       URL.revokeObjectURL(this._currentBlobUrl);
       this._currentBlobUrl = null;
     }
+    
     this._savedPosition = undefined;
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
+    this._trackReady = false;
+    this.updatePlaybackState();
   }
 
   async addLocalTrack(file: File): Promise<Track> {

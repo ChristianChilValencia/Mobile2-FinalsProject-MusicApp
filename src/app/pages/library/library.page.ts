@@ -42,14 +42,12 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     
     this.dataService.tracks$.subscribe(tracks => {
       this.tracks = tracks;
-      this.applyFilter();
     });
     
     this.dataService.playlists$.subscribe(playlists => {
       this.playlists = playlists;
     });
 
-    // Subscribe to playback state
     this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
       this.currentPlaybackState = state;
     });
@@ -60,14 +58,15 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
       this.playbackSubscription.unsubscribe();
       this.playbackSubscription = null;
     }
-  }  ionViewWillEnter() {
+  }  
+  
+  ionViewWillEnter() {
     console.log('Library page - entering view');
-    // Refresh data each time the page is shown
     this.loadData();
   }
+
   async loadData() {
     this.isLoading = true;
-    
     try {
       const [tracks, playlists] = await Promise.all([
         this.dataService.getAllTracks(),
@@ -77,80 +76,24 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
       this.tracks = tracks;
       this.playlists = playlists;
       
-      // Load artwork for all playlists
       await Promise.all(playlists.map(playlist => this.loadPlaylistArtwork(playlist)));
-      
-      this.applyFilter();
     } catch (error) {
       console.error('Error loading library data:', error);
       this.showToast('Failed to load library', 'danger');
     } finally {
       this.isLoading = false;
     }
-  }  segmentChanged(event: any = null) {
-    if (event) {
-      this.selectedSegment = event.detail.value;
-    }
-    
-    // Handle tab changes
-    if (this.selectedSegment === 'songs') {
-      this.applyFilter();
-    } else if (this.selectedSegment === 'playlists') {
-      // No special handling needed
-    } else {
-      this.applyFilter();
-    }
-  }applyFilter() {
-    // For the "History" view, we want to show only tracks that have been played
-    if (this.selectedSegment === 'songs') {
-      // Start with all tracks that have been played (have a lastPlayed timestamp)
-      this.filteredTracks = this.tracks.filter(track => track.lastPlayed);
-      
-      // Apply source filter if not 'all'
-      if (this.sourceFilter === 'local') {
-        this.filteredTracks = this.filteredTracks.filter(track => track.source === 'local');
-      } else if (this.sourceFilter === 'stream') {
-        this.filteredTracks = this.filteredTracks.filter(track => track.source === 'stream');
-      }
-        // Sort by last played date, most recent first
-      this.filteredTracks.sort((a, b) => {
-        if (a.lastPlayed && b.lastPlayed) {
-          return new Date(b.lastPlayed).getTime() - new Date(a.lastPlayed).getTime();
-        }
-        return 0; // Should never happen since we filtered for lastPlayed above
-      });
-    } else {
-      // For other views, show all tracks
-      this.filteredTracks = [...this.tracks];
-      
-      // Apply source filter if not 'all'
-      if (this.sourceFilter === 'local') {
-        this.filteredTracks = this.filteredTracks.filter(track => track.source === 'local');
-      } else if (this.sourceFilter === 'stream') {
-        this.filteredTracks = this.filteredTracks.filter(track => track.source === 'stream');
-      }
-      
-      // Sort by title
-      this.filteredTracks.sort((a, b) => {
-        return a.title.localeCompare(b.title);
-      });
-    }
-  }    filterBySource(source: string) {
-    this.sourceFilter = source;
-    
   }  
   
   async playTrack(track: Track) {
     try {
-      // Prepare track for saving with all required fields
       const trackToSave = {
         ...track,
         addedAt: new Date().toISOString(),
-        lastPlayed: new Date().toISOString(), // Set initial lastPlayed
+        lastPlayed: new Date().toISOString(),
         source: track.source || (track.id.startsWith('deezer-') ? 'stream' : 'local') // Ensure source is set
       };
 
-      // Get latest tracks and check if exists
       const allTracks = await this.dataService.getAllTracks();
       let existingTrack = allTracks.find(t => t.id === track.id);
       
@@ -158,10 +101,8 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
         console.log(`Saving new track ${track.id} to collection before playing`);
         await this.dataService.saveTracks([...allTracks, trackToSave]);
         
-        // Wait a moment for any async operations to complete
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Verify the track was saved by getting fresh data
         const verifyTracks = await this.dataService.getAllTracks();
         existingTrack = verifyTracks.find(t => t.id === track.id);
         
@@ -173,7 +114,6 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
         console.log('Successfully saved track to collection');
       }
       
-      // Play the verified track
       await this.mediaPlayerService.play(existingTrack || trackToSave);
     } catch (error) {
       console.error('Error playing track:', error);
@@ -462,7 +402,9 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     });
     
     await alert.present();
-  }  private async showToast(message: string, color: string = 'success') {
+  }  
+  
+  private async showToast(message: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message,
       duration: 2000,
@@ -472,16 +414,7 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     
     await toast.present();
   }
-  
-  formatDuration(seconds: number): string {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-  }
 
-  // Check if a track is currently playing
   isCurrentlyPlaying(track: Track): boolean {
     if (!this.currentPlaybackState) return false;
     
@@ -491,31 +424,24 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     );
   }
   
-  // Toggle play/pause for a track
   togglePlayTrack(track: Track): void {
     if (this.currentPlaybackState?.currentTrack?.id === track.id) {
-      // The track is already the current track, toggle play/pause
       this.mediaPlayerService.togglePlay();
     } else {
-      // It's a different track, start playing it
       this.playTrack(track);
     }
   }
+
   async createArtistMixWithTrack(track: Track) {
-    // Create a mix based on the artist
     const artistName = track.artist || 'My';
     const playlistName = `${artistName}'s Mix`;
     
     try {
-      // Create the playlist
       const playlist = await this.dataService.createPlaylist(playlistName);
-      
-      // Add the track to the playlist
+
       await this.dataService.addTrackToPlaylist(playlist.id, track.id);
       
       this.showToast(`Created artist mix: ${playlistName}`);
-      
-      // Refresh playlists after creating a new one
       this.loadData();
       
       return true;
@@ -526,42 +452,9 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     }
   }
 
-  // Helper method to display relative time
-  getTimeAgo(timestamp?: string): string {
-    if (!timestamp) return 'Unknown time';
-    
-    const now = new Date();
-    const playedDate = new Date(timestamp);
-    const diffMs = now.getTime() - playedDate.getTime();
-    
-    // Convert to appropriate time unit
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    
-    if (diffSecs < 60) {
-      return 'Just now';
-    } else if (diffMins < 60) {
-      return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
-    } else if (diffDays < 30) {
-      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
-    } else {
-      // Format date for older items
-      return playedDate.toLocaleDateString();
-    }
-  }
-
-  // Handle pull-to-refresh
   async refreshLibrary(event?: any) {
     try {
       await this.loadData();
-      
-      if (this.selectedSegment === 'songs') {
-        this.applyFilter();
-      }
       
       if (event) {
         event.target.complete();

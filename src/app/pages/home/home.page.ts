@@ -32,7 +32,9 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     private actionSheetController: ActionSheetController,
     private alertController: AlertController,
     private toastController: ToastController
-  ) {}   ionViewWillEnter() {
+  ) {}   
+  
+  ionViewWillEnter() {
     if (this.trendingTracks.length === 0 && !this.loadingTrending) {
       this.loadTrendingTracks();
     }
@@ -47,7 +49,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       this.playlists = playlists;
     });
     
-    // Subscribe to playback state
     this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
       this.currentPlaybackState = state;
     });
@@ -66,14 +67,14 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       this.playbackSubscription.unsubscribe();
     }
   }
-  // Load trending tracks from Deezer
+
   loadTrendingTracks() {
     this.loadingTrending = true;
     this.trendingError = false;
     
     this.deezerService.getTrendingTracks().subscribe(
       tracks => {
-        this.trendingTracks = tracks.slice(0, 10); // Limit to 10 tracks
+        this.trendingTracks = tracks.slice(0, 10);
         this.loadingTrending = false;
         console.log('Loaded trending tracks:', this.trendingTracks);
       },
@@ -85,14 +86,13 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     );
   } 
   
-  // Load explore tracks from Deezer
   loadExploreTracks() {
     this.loadingExplore = true;
     this.exploreError = false;
     
     this.deezerService.getExploreTracks().subscribe(
       tracks => {
-        this.exploreTracks = tracks.slice(0, 10); // Limit to 10 tracks
+        this.exploreTracks = tracks.slice(0, 10);
         this.loadingExplore = false;
         console.log('Loaded explore tracks:', this.exploreTracks);
       },
@@ -103,16 +103,12 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       }
     );
   }
-    // Play a trending track
   async playTrendingTrack(track: DeezerTrack) {
     try {
-      // Convert to our track format using the helper method
       const trackToPlay = this.convertDeezerTrackToTrack(track);
 
-      // First ensure the track is saved to the database correctly
       await this.saveTrackIfNeeded(trackToPlay);
       
-      // Use the play method to play the track directly
       await this.mediaPlayerService.play(trackToPlay);
       
     } catch (error) {
@@ -121,7 +117,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     }
   }
   
-  // Play an explore track
   async playExploreTrack(track: DeezerTrack) {
     try {
       // Convert to our track format using the helper method
@@ -220,26 +215,7 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       await this.playTrack(track);
     }
   }
-  getTimeAgo(timestamp: string): string {
-    const now = new Date();
-    const played = new Date(timestamp);
-    const diff = now.getTime() - played.getTime();
-    
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    
-    if (days > 0) {
-      return days === 1 ? 'Yesterday' : `${days} days ago`;
-    } else if (hours > 0) {
-      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
-    } else if (minutes > 0) {
-      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
-    } else {
-      return 'Just now';
-    }
-  }  // Add a trending track to a playlist - initial entry point from UI
+
   async addTrackToPlaylist(track: DeezerTrack) {
     try {
       // Convert DeezerTrack to our internal Track format
@@ -393,24 +369,20 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     } catch (error) {
       console.error('Error preparing to create playlist:', error);
     }
-  }  // Create an artist mix playlist with a track
+  }  
+  
   async createArtistMixWithTrack(track: Track) {
     try {
-      // First, make sure the track is saved in our data service
       const filePath = track.pathOrUrl || track.previewUrl;
       await this.dataService.saveLocalMusic(track, filePath);
       
-      // Ensure track exists in collection
       await this.saveTrackIfNeeded(track);
       
-      // Create a mix based on the artist
       const artistName = track.artist || 'My';
       const mixName = `${artistName}'s Mix`;
       
-      // Create the playlist
       const playlist = await this.dataService.createPlaylist(mixName);
       
-      // Add the track to the playlist
       await this.dataService.addTrackToPlaylist(playlist.id, track.id);
       
       this.showToast(`Created artist mix: ${mixName}`);
@@ -419,7 +391,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     }
   }
 
-  // Helper method to show toast messages
   async showToast(message: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message,
@@ -430,7 +401,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     await toast.present();
   }
 
-  // Convert Deezer track to our internal Track format
   convertDeezerTrackToTrack(track: DeezerTrack): Track {
     return {
       id: `deezer-${track.id}`,

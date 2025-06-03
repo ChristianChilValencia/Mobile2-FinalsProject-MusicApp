@@ -2,9 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { Router } from '@angular/router';
 import { ToastController, LoadingController, Platform, ActionSheetController, AlertController } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
-// import { Track } from '../../models/track.model';
 import { DataService as LocalDataService, Track } from '../../services/data.service';
-// import { ConfigService, AppSettings } from '../../services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -15,11 +13,10 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
   styleUrls: ['./uploads.page.scss'],
   standalone: false
 })
-export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
-  // Local music state
+export class UploadsPage implements OnInit, OnDestroy {  
+  @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
+
   localMusic: Track[] = [];  
-  isDarkMode = false;
-  showRepairOption = true; // Show repair option by default
   private settingsSub?: Subscription;
 
   // Current playback state
@@ -57,12 +54,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     await alert.present();
   }
 
-  formatDuration(seconds: number): string {
-    if (!seconds) return '0:00';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-  }
   constructor(
     public audioService: MediaPlayerService,
     private dataService: LocalDataService,
@@ -88,13 +79,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       this.playbackSubscription.unsubscribe();
       this.playbackSubscription = null;
     }
-  }
-
-  formatTime(time: number | null): string {
-    if (time === null) return '0:00';
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }
 
   async doRefresh(event: any) {

@@ -19,7 +19,6 @@
   </ion-refresher>
   
   <div class="library-container">
-      <!-- Playlists view -->
       <div class="empty-state" *ngIf="playlists.length === 0">
         <ion-icon name="musical-notes"></ion-icon>
         <h3>No Playlists Yet</h3>
@@ -39,7 +38,6 @@
       </ion-list>      
       <br><br><br><br><br>
 
-      <!-- Floating action button for creating playlist -->
       <ion-fab vertical="bottom" horizontal="end" slot="fixed" style="bottom: 100px; right: 16px; position: fixed; z-index: 999;">
         <ion-fab-button (click)="createPlaylist()">
           <ion-icon name="add"></ion-icon>

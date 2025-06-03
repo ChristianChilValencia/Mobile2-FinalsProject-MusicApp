@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { Router } from '@angular/router';
 import { ToastController, LoadingController, Platform, ActionSheetController, AlertController } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { Track } from '../../models/track.model';
-import { DataService as LocalDataService } from '../../services/data.service';
+// import { Track } from '../../models/track.model';
+import { DataService as LocalDataService, Track } from '../../services/data.service';
 // import { ConfigService, AppSettings } from '../../services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
@@ -57,7 +57,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     await alert.present();
   }
 
-  // Format duration for display
   formatDuration(seconds: number): string {
     if (!seconds) return '0:00';
     const minutes = Math.floor(seconds / 60);
@@ -67,7 +66,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
   constructor(
     public audioService: MediaPlayerService,
     private dataService: LocalDataService,
-    // private configService: ConfigService,
     public router: Router,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
@@ -76,7 +74,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     private alertCtrl: AlertController
   ) {}
   async ngOnInit() {
-    // Subscribe to playback state
     this.playbackSubscription = this.audioService.getPlaybackState().subscribe(state => {
       this.currentPlaybackState = state;
     });
@@ -93,7 +90,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     }
   }
 
-  // Format time for display
   formatTime(time: number | null): string {
     if (time === null) return '0:00';
     const minutes = Math.floor(time / 60);
@@ -239,11 +235,8 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       input.value = '';
     }
   }  
-  
-  async playTrack(track: Track) {
+    async playTrack(track: Track) {
     try {
-      // First add to recently played history
-      await this.dataService.addToRecentlyPlayed(track.id);
       // Create a queue with just this track and play it
       await this.audioService.setQueue([track], 0);
       // Navigate to the player page
@@ -260,7 +253,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     }
   }
 
-  // Check if a track is currently playing
   isCurrentlyPlaying(track: Track): boolean {
     if (!this.currentPlaybackState) return false;
     
@@ -268,8 +260,8 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       this.currentPlaybackState.isPlaying && 
       this.currentPlaybackState.currentTrack?.id === track.id
     );
-  }  // Toggle play/pause for a track
-
+  } 
+  
   async togglePlayTrack(track: Track): Promise<void> {
     try {
       if (this.currentPlaybackState && this.currentPlaybackState.currentTrack?.id === track.id) {
@@ -291,7 +283,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     }
   }
 
-  // Add track to playlist
   async addToPlaylist(track: Track) {
     // Get all playlists
     const playlists = await this.dataService.getAllPlaylists();
@@ -345,8 +336,8 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     });
     
     await actionSheet.present();
-  }  // Create a custom playlist with a track
-
+  }  
+  
   async createCustomPlaylist(track: Track) {
     const alert = await this.alertCtrl.create({
       header: 'New Playlist',
@@ -398,7 +389,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     return false; // Default return value
   }
   
-  // Create an artist mix with a track
   async createArtistMix(track: Track) {
     try {
       const artistName = track.artist || 'My';
@@ -419,7 +409,7 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       return false;
     }
   }
-    // Show a toast message
+
   async showToast(message: string, color: string = 'success') {
     const toast = await this.toastCtrl.create({
       message,

@@ -78,11 +78,8 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       this.showToast('Failed to load playlist', 'danger');
       this.navController.navigateBack('/tabs/library');
     }
-  }
-  async playTrack(track: Track, index: number) {
+  }  async playTrack(track: Track, index: number) {
     try {
-      // Add to recently played first
-      await this.dataService.addToRecentlyPlayed(track.id);
       // Start playback from the selected track
       this.mediaPlayerService.setQueue(this.playlistTracks, index);
     } catch (error) {

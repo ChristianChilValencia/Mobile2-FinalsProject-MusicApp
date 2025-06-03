@@ -4,7 +4,7 @@ import { DataService } from './data.service';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Platform } from '@ionic/angular';
 import { Capacitor } from '@capacitor/core';
-import { Track } from '../models/track.model';
+import { Track } from './data.service';
 
 export enum RepeatMode {
   None = 'none',
@@ -79,7 +79,6 @@ export class MediaPlayerService {
   }  
   
   private setupAudioEvents() {
-    // Common event handler setup for both players
     [this.audioPlayer, this.localAudioPlayer].forEach(player => {
       player.addEventListener('loadedmetadata', () => {
         const isStreamedTrack = player === this.audioPlayer && !this.currentTrack$.getValue()?.isLocal;
@@ -119,12 +118,6 @@ export class MediaPlayerService {
       player.addEventListener('ended', async () => {
         const currentTrack = this.currentTrack$.getValue();
         if (currentTrack) {
-          try {
-            await this.dataService.refreshRecentlyPlayed();
-          } catch (error) {
-            console.error('Error refreshing history on track end:', error);
-          }
-          
           // Handle repeat modes
           if (this.repeatMode === RepeatMode.One && currentTrack) {
             await this.play(currentTrack);
@@ -193,12 +186,9 @@ export class MediaPlayerService {
         artwork: track.artwork || track.imageUrl || 'assets/placeholder-player.png',
         title: track.title || 'Unknown Title',
         artist: track.artist || 'Unknown Artist'
-      };
-
-      try {
+      };      try {
         // Save track metadata
         await this.dataService.saveTracks([trackToSave]);
-        await this.dataService.addToRecentlyPlayed(track.id);
       } catch (error) {
         console.error('Error saving track metadata:', error);
         // Continue playing even if metadata save fails
@@ -322,13 +312,6 @@ export class MediaPlayerService {
     // Get the next track
     const nextTrack = this.queue[this.queueIndex];
     
-    // Add the next track to recently played BEFORE playing
-    try {
-      await this.dataService.addToRecentlyPlayed(nextTrack.id);
-    } catch (error) {
-      console.error('Error adding track to history during next():', error);
-    }
-    
     // Then play the track
     await this.play(nextTrack);
   }
@@ -346,13 +329,6 @@ export class MediaPlayerService {
       
       // Get the previous track
       const prevTrack = this.queue[this.queueIndex];
-      
-      // Add the previous track to recently played BEFORE playing
-      try {
-        await this.dataService.addToRecentlyPlayed(prevTrack.id);
-      } catch (error) {
-        console.error('Error adding track to history during previous():', error);
-      }
       
       // Then play the track
       await this.play(prevTrack);
@@ -486,8 +462,6 @@ export class MediaPlayerService {
         duration: trackDuration,
         imageUrl: 'assets/placeholder-player.png',
         previewUrl: trackUri,
-        spotifyId: '',
-        liked: false,
         isLocal: true,
         localPath: trackFilePath,
         source: 'local',
@@ -541,22 +515,15 @@ export class MediaPlayerService {
 
       tempAudio.preload = 'metadata';
       tempAudio.src = url;
-    });  }  async setQueue(tracks: Track[], startIndex = 0): Promise<void> {
+    });  
+  }  
+    
+  async setQueue(tracks: Track[], startIndex = 0): Promise<void> {
     console.log(`Setting queue with ${tracks.length} tracks, starting at index ${startIndex}`);
     this.queue = tracks;
     this.queueIndex = startIndex;
     
     if (tracks.length) {
-      // Ensure the starting track is added to recently played BEFORE playing
-      if (startIndex >= 0 && startIndex < tracks.length) {
-        try {
-          await this.dataService.addToRecentlyPlayed(tracks[startIndex].id);
-        } catch (error) {
-          console.error('Error adding track to history during setQueue:', error);
-          // Continue anyway
-        }
-      }
-      
       // Then play the track with proper error handling
       try {
         console.log('Playing track from queue:', tracks[startIndex]);
@@ -624,9 +591,4 @@ export class MediaPlayerService {
   getCurrentTime(): Observable<number> { return this.currentTime$.asObservable(); }
   getDuration(): Observable<number> { return this.duration$.asObservable(); }
   getPlaybackState(): Observable<PlaybackState> { return this.playbackState$.asObservable(); }
-
-  // Need to update state after any changes
-  private handleStateChange(): void {
-    this.updatePlaybackState();
-  }
 }

@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-// import { StorageService } from './storage.service';
 import { v4 as uuidv4 } from 'uuid';
 import { BehaviorSubject } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
@@ -9,11 +8,24 @@ import {
   SQLiteConnection,
   SQLiteDBConnection
 } from '@capacitor-community/sqlite';
-import { Filesystem, Directory } from '@capacitor/filesystem';
 
-// Import and re-export Track interface from shared models
-import { Track } from '../models/track.model';
-export { Track } from '../models/track.model';
+export interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  duration: number;
+  imageUrl: string;
+  previewUrl: string;
+  isLocal: boolean;
+  localPath?: string;
+  source?: 'local' | 'stream';
+  addedAt?: string;
+  lastPlayed?: string;
+  type?: string;
+  artwork?: string | null;
+  pathOrUrl?: string;
+}
 
 export interface Playlist {
   id: string;
@@ -34,13 +46,6 @@ export interface PlaybackState {
   queue: Track[];
   currentIndex: number;
   isShuffleActive: boolean;
-  repeatMode: RepeatMode;
-}
-
-export enum RepeatMode {
-  None = 'none',
-  One = 'one',
-  All = 'all'
 }
 
 @Injectable({
@@ -66,27 +71,20 @@ export class DataService {
 
   private tracksSubject = new BehaviorSubject<Track[]>([]);
   private playlistsSubject = new BehaviorSubject<Playlist[]>([]);
-  private recentlyPlayedSubject = new BehaviorSubject<Track[]>([]);
   private sqlite: SQLiteConnection;
   private db!: SQLiteDBConnection;
   private _initPromise: Promise<void> | null = null;
   
   tracks$ = this.tracksSubject.asObservable();
   playlists$ = this.playlistsSubject.asObservable();
-  recentlyPlayed$ = this.recentlyPlayedSubject.asObservable();
   
   constructor(
-    // private storageService: StorageService,
     private platform: Platform
   ) {
     this.sqlite = new SQLiteConnection(CapacitorSQLite);
     this.loadTracks();
     this.loadPlaylists();
-    
-    // Initialize recently played tracks
-    this.initRecentlyPlayed();
-  }
-
+}
   // Add a method to run database migrations
   private async runDatabaseMigrations(): Promise<void> {
     try {
@@ -117,16 +115,6 @@ export class DataService {
       console.log('Database migrations completed');
     } catch (error) {
       console.error('Error running database migrations:', error);
-    }
-  }
-
-  // Initialize recently played tracks from storage
-  private async initRecentlyPlayed(): Promise<void> {
-    try {
-      const recentTracks = await this.getRecentlyPlayedTracks();
-      this.recentlyPlayedSubject.next(recentTracks);
-    } catch (error) {
-      console.error('Error initializing recently played tracks:', error);
     }
   }
 
@@ -177,17 +165,10 @@ export class DataService {
             duration     INTEGER,
             image_url    TEXT,
             preview_url  TEXT,
-            spotify_id   TEXT,
-            liked        INTEGER DEFAULT 0,
             is_local     INTEGER DEFAULT 0,
             source       TEXT CHECK(source IN ('local', 'stream')) DEFAULT 'stream',
             last_played  TEXT,
             added_at     TEXT
-          );
-
-          CREATE TABLE IF NOT EXISTS liked_music (
-            track_id     TEXT PRIMARY KEY,
-            liked_at     TEXT NOT NULL DEFAULT (datetime('now'))
           );
 
           CREATE TABLE IF NOT EXISTS downloaded_music (
@@ -213,8 +194,6 @@ export class DataService {
               t.duration,
               t.image_url    AS imageUrl,
               t.preview_url  AS previewUrl,
-              t.spotify_id   AS spotifyId,
-              t.liked,
               t.is_local     AS isLocal,
               t.source,
               dm.file_path   AS localPath
@@ -232,8 +211,6 @@ export class DataService {
               duration: row.duration,
               imageUrl: row.imageUrl,
               previewUrl: row.previewUrl,
-              spotifyId: row.spotifyId,
-              liked: !!row.liked,
               isLocal: true,
               source: row.source as 'local' | 'stream',
               localPath: row.localPath
@@ -286,8 +263,8 @@ export class DataService {
         await this.db.run(
           `INSERT OR REPLACE INTO tracks (
             id, title, artist, album, duration,
-            image_url, preview_url, spotify_id,
-            liked, is_local, source, added_at, last_played
+            image_url, preview_url,
+            is_local, source, added_at, last_played
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
           [
             localTrack.id,
@@ -297,8 +274,6 @@ export class DataService {
             localTrack.duration,
             localTrack.imageUrl,
             localTrack.previewUrl,
-            localTrack.spotifyId,
-            localTrack.liked ? 1 : 0,
             1,
             'local',
             localTrack.addedAt || new Date().toISOString(),
@@ -323,157 +298,7 @@ export class DataService {
       console.error('Error saving local music:', error);
       throw error;
     }
-  }  async addToRecentlyPlayed(trackId: string): Promise<void> {
-    if (!trackId) {
-      console.error('Invalid trackId provided to addToRecentlyPlayed');
-      return;
-    }
-    
-    try {
-      console.log('DataService - Adding track to recently played:', trackId);
-      
-      // Get current tracks
-      const tracks = this.tracksSubject.value;
-      let track = tracks.find(t => t.id === trackId);
-
-      // For Deezer tracks, do additional verification and ensure all required fields are set
-      if (trackId.startsWith('deezer-')) {
-        console.log(`Verifying Deezer track ${trackId} before adding to history`);
-        
-        // First check if track exists in collection
-        if (!track) {
-          console.error(`Deezer track ${trackId} not found in collection. Cannot add to history.`);
-          throw new Error(`Track must be saved to collection before adding to history: ${trackId}`);
-        }
-
-        // Ensure track has all required fields
-        const updatedTrack: Track = {          ...track,
-          source: 'stream', // Always set stream for Deezer tracks
-          addedAt: track.addedAt || new Date().toISOString(),
-          artist: track.artist || 'Unknown Artist',
-          title: track.title || 'Unknown Title',
-          artwork: track.artwork || 'assets/placeholder-player.png'
-        };
-
-        // Save the updated track back to collection
-        const updatedTracks = tracks.map(t => t.id === trackId ? updatedTrack : t);
-        await this.saveTracks(updatedTracks);
-        track = updatedTrack; // Update the reference
-        console.log(`Updated Deezer track ${trackId} with source = stream`);
-      }
-
-      // Make sure we still have a valid track
-      if (!track) {
-        console.error(`Track with ID ${trackId} not found in tracks collection.`);
-        throw new Error(`Track with ID ${trackId} must be in collection before adding to history.`);
-      }
-
-      // Update the track's lastPlayed timestamp
-      const updatedTrack: Track = {
-        ...track,
-        lastPlayed: new Date().toISOString()
-      };
-      console.log(`Updated lastPlayed for ${updatedTrack.title} to ${updatedTrack.lastPlayed}`);
-
-      // Update the tracks collection
-      const freshTracks = tracks.map(t => t.id === trackId ? updatedTrack : t);
-      this.tracksSubject.next(freshTracks);
-      await this.saveTracks(freshTracks);      // Update SQLite if on mobile
-      if (this.platform.is('hybrid')) {
-        try {
-          await this.ensureInit();
-          
-          // Make sure the last_played column exists
-          await this.runDatabaseMigrations();
-          
-          // Update the last_played field
-          await this.db.run(
-            `UPDATE tracks SET last_played = ? WHERE id = ?;`,
-            [updatedTrack.lastPlayed, trackId]
-          );
-          console.log(`Successfully updated last_played in database for track ${trackId}`);
-        } catch (error) {
-          // Handle the error but don't fail the whole operation
-          console.error('Error updating last_played in database:', error);
-          // Continue with the rest of the function
-        }
-      }
-
-      // Get current recently played IDs
-      let recentTracks = await this.get('recently_played') || [];
-      console.log('Current recently played IDs:', recentTracks);
-
-      // Remove the track if it's already in the list (avoid duplicates)
-      recentTracks = recentTracks.filter((id: string) => id !== trackId);
-
-      // Add the track ID to the beginning of the array
-      recentTracks.unshift(trackId);
-
-      // Limit to most recent 20 tracks
-      recentTracks = recentTracks.slice(0, 20);
-      console.log('Updated recently played IDs:', recentTracks);
-
-      // Save the updated recent tracks
-      await this.set('recently_played', recentTracks);
-
-      // Update the recentlyPlayedSubject with fresh data
-      const updatedRecentTracks = await this.getRecentlyPlayedTracks();
-      this.recentlyPlayedSubject.next(updatedRecentTracks);
-
-      console.log(`Successfully added track to history: ${updatedRecentTracks.length} tracks in history`);
-    } catch (error) {
-      console.error('Error adding track to recently played:', error);
-      throw error; // Re-throw the error since this is a critical operation
-    }
-  }
-  async getRecentlyPlayedTracks(): Promise<Track[]> {
-    try {
-      const recentTrackIds = await this.get('recently_played') || [];
-      console.log('DataService - Getting recently played tracks, IDs:', recentTrackIds);
-      
-      const tracks = this.tracksSubject.value;
-      console.log('Total tracks in collection:', tracks.length);
-      
-      // Get the track objects for the recent IDs, maintain order
-      const recentTracks: Track[] = [];
-      for (const id of recentTrackIds) {
-        const track = tracks.find(t => t.id === id);
-        if (track) {
-          recentTracks.push(track);
-        } else {
-          console.warn(`Track with ID ${id} is in recently played but not found in tracks collection`);
-        }
-      }
-      
-      console.log('Found', recentTracks.length, 'recently played tracks');
-      return recentTracks;
-    } catch (error) {
-      console.error('Error getting recently played tracks:', error);
-      return [];
-    }
-  }
-    // Method to force refresh recently played tracks
-  async refreshRecentlyPlayed(): Promise<void> {
-    try {
-      console.log('DataService - Force refreshing recently played tracks');
-      const recentTracks = await this.getRecentlyPlayedTracks();
-      
-      // Log each track to help with debugging
-      if (recentTracks.length > 0) {
-        console.log('Recently played tracks:');
-        recentTracks.forEach((track, index) => {
-          console.log(`${index + 1}. ${track.title} by ${track.artist} (ID: ${track.id}, Last played: ${track.lastPlayed})`);
-        });
-      } else {
-        console.log('No recently played tracks found');
-      }
-      
-      this.recentlyPlayedSubject.next(recentTracks);
-      console.log('Refreshed recently played tracks:', recentTracks.length);
-    } catch (error) {
-      console.error('Error refreshing recently played tracks:', error);
-    }
-  }
+  } 
 
   // Additional methods for track and playlist operations
   async getAllTracks(): Promise<Track[]> {
@@ -511,8 +336,7 @@ export class DataService {
           console.error('Error closing db connection:', err);
         }
       }
-      
-      // Force a clean initialization
+        // Force a clean initialization
       this._initPromise = null;
       await this.ensureInit();
       
@@ -524,7 +348,6 @@ export class DataService {
       // Reload data
       await this.loadTracks();
       await this.loadPlaylists();
-      await this.initRecentlyPlayed();
     } catch (error) {
       console.error('Error resetting database:', error);
       throw error;
@@ -688,19 +511,7 @@ export class DataService {
         this.playlistsSubject.next([...playlists]);
         await this.savePlaylists(playlists);
       }
-
-      // Also update recently played if needed
-      const recentTracks = await this.getRecentlyPlayedTracks();
-      if (recentTracks.some(t => t.id === trackId)) {
-        // The track was in recently played, so we need to update
-        let recentIds = await this.get('recently_played') || [];
-        recentIds = recentIds.filter((id: string) => id !== trackId);
-        await this.set('recently_played', recentIds);
-        
-        // Update the recentlyPlayedSubject
-        const updatedRecentTracks = await this.getRecentlyPlayedTracks();
-        this.recentlyPlayedSubject.next(updatedRecentTracks);
-      }
+      
     } catch (error) {
       console.error('Error removing track:', error);
       throw error;

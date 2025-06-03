@@ -1,6 +1,6 @@
 .mini-player {
   position: fixed;
-  bottom: 56px; // Height of the tab bar
+  bottom: 56px; 
   left: 0;
   width: 100%;
   background: var(--ion-color-light);
@@ -26,7 +26,7 @@
       border-radius: 4px;
       object-fit: cover;
       margin-right: 12px;
-      padding: 2px; /* Smaller padding for the mini-player */
+      padding: 2px;
     }
     
     .details {

@@ -7,7 +7,7 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-refresher slot="fixed" (ionRefresh)="refreshRecentlyPlayed($event)">
+  <ion-refresher slot="fixed" (ionRefresh)="refreshContent($event)">
     <ion-refresher-content
       pullingIcon="chevron-down-circle-outline"
       pullingText="Pull to refresh"

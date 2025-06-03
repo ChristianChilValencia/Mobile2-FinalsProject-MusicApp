@@ -32,15 +32,12 @@ export class SearchPage implements OnInit, OnDestroy {
   ) {}
   ngOnInit() {
     this.loadPlaylists();
-    
-    // Subscribe to playback state changes
-    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
+      this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
       this.currentPlaybackState = state;
     });
   }
 
   ngOnDestroy() {
-    // Clean up subscription when component is destroyed
     if (this.playbackSubscription) {
       this.playbackSubscription.unsubscribe();
       this.playbackSubscription = null;
@@ -58,7 +55,7 @@ export class SearchPage implements OnInit, OnDestroy {
     }
 
     if (this.searchQuery.trim().length < 3) {
-      return; // Wait for at least 3 characters
+      return;  
     }
 
     this.performSearch();
@@ -92,7 +89,6 @@ export class SearchPage implements OnInit, OnDestroy {
     this.errorMessage = '';
   }  async playTrack(track: Track) {
     try {
-      // Prepare track for saving - ensure proper timestamps
       const trackToSave = {
         ...track,
         lastPlayed: new Date().toISOString(),

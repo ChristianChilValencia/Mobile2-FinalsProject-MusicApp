@@ -14,7 +14,6 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
   tracks: Track[] = [];
   playlists: Playlist[] = [];
   filteredTracks: Track[] = [];
-  recentTracks: Track[] = [];
   selectedSegment: string = 'playlists';
   isLoading: boolean = true;
   sourceFilter: string = 'all';
@@ -39,10 +38,8 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     private toastController: ToastController
   ) {}
   ngOnInit() {
-    // Initialize with data from local storage
     this.loadData();
     
-    // Subscribe to updates
     this.dataService.tracks$.subscribe(tracks => {
       this.tracks = tracks;
       this.applyFilter();
@@ -52,16 +49,6 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
       this.playlists = playlists;
     });
 
-    // Subscribe to recently played updates
-    this.dataService.recentlyPlayed$.subscribe(recentTracks => {
-      this.recentTracks = recentTracks;
-      if (this.sourceFilter !== 'all') {
-        this.recentTracks = recentTracks.filter(track => 
-          track.source === this.sourceFilter
-        );
-      }
-    });
-    
     // Subscribe to playback state
     this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
       this.currentPlaybackState = state;
@@ -77,17 +64,6 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     console.log('Library page - entering view');
     // Refresh data each time the page is shown
     this.loadData();
-    
-    // Force refresh the recently played tracks when entering the page
-    this.dataService.refreshRecentlyPlayed().then(() => {
-      console.log('Recently played tracks refreshed on page enter');
-      // Refresh the current tab
-      if (this.selectedSegment === 'songs') {
-        this.refreshHistory();
-      } else if (this.selectedSegment === 'recents') {
-        this.refreshRecents();
-      }
-    });
   }
   async loadData() {
     this.isLoading = true;
@@ -118,9 +94,9 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     
     // Handle tab changes
     if (this.selectedSegment === 'songs') {
-      this.refreshHistory();
-    } else if (this.selectedSegment === 'recents') {
-      this.refreshRecents();
+      this.applyFilter();
+    } else if (this.selectedSegment === 'playlists') {
+      // No special handling needed
     } else {
       this.applyFilter();
     }
@@ -162,15 +138,9 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
   }    filterBySource(source: string) {
     this.sourceFilter = source;
     
-    // Handle recents tab separately
-    if (this.selectedSegment === 'recents') {
-      // Refresh recents with new filter
-      this.refreshRecents();
-    } else {
-      // For other tabs, use the normal filter
-      this.applyFilter();
-    }
-  }  async playTrack(track: Track) {
+  }  
+  
+  async playTrack(track: Track) {
     try {
       // Prepare track for saving with all required fields
       const trackToSave = {
@@ -555,80 +525,6 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
       return false;
     }
   }
-  // Method to refresh history when needed
-  async refreshHistory() {
-    try {
-      console.log('Library page - Refreshing history');
-      
-      // Force refresh the recently played tracks
-      await this.dataService.refreshRecentlyPlayed();
-      
-      // Reload all tracks to ensure we have the latest data
-      const tracks = await this.dataService.getAllTracks();
-      this.tracks = tracks;
-      
-      console.log('Library page - Got', tracks.length, 'total tracks');
-      console.log('Library page - Tracks with lastPlayed:', tracks.filter(t => t.lastPlayed).length);
-      
-      // Apply filter to update the filteredTracks array with history
-      this.applyFilter();
-      
-      console.log('History refreshed with', 
-        this.filteredTracks.filter(track => track.lastPlayed).length, 
-        'recently played tracks');
-    } catch (error) {
-      console.error('Error refreshing history:', error);
-    }
-  }
-
-  // Method to refresh recently played tracks
-  async refreshRecents() {
-    try {
-      console.log('Library page - Refreshing recent tracks');
-      
-      // Force refresh the recently played tracks
-      await this.dataService.refreshRecentlyPlayed();
-      
-      // Get the recent tracks directly from the data service
-      const recentTracks = await this.dataService.getRecentlyPlayedTracks();
-      
-      // Apply source filter
-      if (this.sourceFilter === 'local') {
-        this.recentTracks = recentTracks.filter(track => track.source === 'local');
-      } else if (this.sourceFilter === 'stream') {
-        this.recentTracks = recentTracks.filter(track => track.source === 'stream');
-      } else {
-        this.recentTracks = recentTracks;
-      }
-      
-      console.log('Recent tracks refreshed with', this.recentTracks.length, 'tracks');
-    } catch (error) {
-      console.error('Error refreshing recent tracks:', error);
-      this.showToast('Failed to refresh recent tracks', 'danger');
-    }
-  }
-
-  // Method to remove a track from the recently played list
-  async removeFromRecents(track: Track) {
-    try {
-      // Get the current recently played IDs
-      const recentIds = await this.dataService.get('recently_played') || [];
-      
-      // Remove the track ID from the list
-      const updatedIds = recentIds.filter((id: string) => id !== track.id);
-      
-      // Save the updated list
-      await this.dataService.set('recently_played', updatedIds);
-      
-      // Refresh the recents view
-      await this.refreshRecents();
-      
-      this.showToast(`Removed "${track.title}" from recent tracks`);
-    } catch (error) {
-      console.error('Error removing track from recents:', error);
-      this.showToast('Failed to remove track from recents', 'danger');
-    }
-  }
 
   // Helper method to display relative time
   getTimeAgo(timestamp?: string): string {
@@ -664,9 +560,7 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
       await this.loadData();
       
       if (this.selectedSegment === 'songs') {
-        await this.refreshHistory();
-      } else if (this.selectedSegment === 'recents') {
-        await this.refreshRecents();
+        this.applyFilter();
       }
       
       if (event) {
@@ -676,35 +570,6 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
       console.error('Error refreshing library:', error);
       if (event) {
         event.target.complete();
-      }
-    }
-  }
-
-  // Debug function to check stored history
-  async debugHistory() {
-    try {
-      // Get the raw recently played IDs from storage
-      const recentlyPlayedIds = await this.dataService.get('recently_played') || [];
-      
-      // Get all tracks
-      const allTracks = await this.dataService.getAllTracks();
-      
-      let message = `Recently played IDs: ${recentlyPlayedIds.length}\n`;
-      message += `Total tracks: ${allTracks.length}\n`;
-      message += `Tracks with lastPlayed: ${allTracks.filter(t => t.lastPlayed).length}\n`;
-      
-      // Show debug info in alert
-      const alert = await this.alertController.create({
-        header: 'History Debug Info',
-        message,
-        buttons: ['OK']
-      });
-      
-      await alert.present();
-      
-      console.log('Debug info:', message);
-    } catch (error) {
-      console.error('Error in debugHistory:', error);
-    }
+      }    }
   }
 }

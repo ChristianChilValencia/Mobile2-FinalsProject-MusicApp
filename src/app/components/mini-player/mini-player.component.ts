@@ -24,19 +24,16 @@ export class MiniPlayerComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Subscribe to playback state changes
     this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
       this.playbackState = state;
     });
     
-    // Subscribe specifically to navigation end events
     this.routerSubscription = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
         this.isPlayerPage = this.router.url.includes('/tabs/player');
       });
       
-    // Set initial state
     this.isPlayerPage = this.router.url.includes('/tabs/player');
   }
 

@@ -12,7 +12,6 @@ import { DeezerService, DeezerTrack } from '../../services/deezer.service';
   standalone: false
 })
 export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
-  recentlyPlayed: Track[] = [];
   playlists: Playlist[] = [];
   trendingTracks: DeezerTrack[] = [];
   exploreTracks: DeezerTrack[] = [];
@@ -34,8 +33,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     private alertController: AlertController,
     private toastController: ToastController
   ) {}   ionViewWillEnter() {
-    this.dataService.refreshRecentlyPlayed();
-    
     if (this.trendingTracks.length === 0 && !this.loadingTrending) {
       this.loadTrendingTracks();
     }
@@ -46,12 +43,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
   }
   
   ngOnInit() {
-    // Subscribe to recently played tracks using the observable
-    this.tracksSubscription = this.dataService.recentlyPlayed$.subscribe(recentTracks => {
-      this.recentlyPlayed = recentTracks;
-      this.modeChanged();
-    });
-    
     this.playlistsSubscription = this.dataService.playlists$.subscribe(playlists => {
       this.playlists = playlists;
     });
@@ -181,44 +172,34 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     } catch (error) {
       console.error('Error saving track:', error);
       throw error; // Re-throw to handle in calling function
-    }
-  }  refreshRecentlyPlayed(event: any) {
-    this.dataService.refreshRecentlyPlayed().then(() => {
-      // Only reload trending and explore tracks if requested with the refresh control
-      if (event) {
-        this.loadTrendingTracks();
-        this.loadExploreTracks();
-        event.target.complete();
-      }
-    });
-  }
+    }  }  
 
-  modeChanged() {
-    if (this.currentMode === 'all') {
-      // No filtering needed
-    } else if (this.currentMode === 'local') {
-      this.recentlyPlayed = this.recentlyPlayed.filter(track => track.source === 'local');
-    } else if (this.currentMode === 'streaming') {
-      this.recentlyPlayed = this.recentlyPlayed.filter(track => track.source === 'stream');
+  refreshContent(event: any) {
+    // Only reload trending and explore tracks
+    this.loadTrendingTracks();
+    this.loadExploreTracks();
+    if (event) {
+      event.target.complete();
     }
-  }  
+  }
 
   async playTrack(track: Track) {
     try {
-      // Update recently played through data service
-      await this.dataService.addToRecentlyPlayed(track.id);
-      
-      // Play the track (no need to manually refresh recently played list)
+      // Play the track
       this.mediaPlayerService.setQueue([track], 0);
     } catch (error) {
       console.error('Error playing track:', error);
     }
-  }
-  // No need for reversedRecentlyPlayed getter since we want newest first
+  }  // No need for reversedRecentlyPlayed getter since we want newest first
 
-  getFirstTrackArtwork(playlist: Playlist): string {
-    const firstTrack = this.recentlyPlayed.find(track => track.id === playlist.trackIds[0]);
-    return firstTrack?.artwork || firstTrack?.imageUrl || 'assets/placeholder-playlist.png';
+  async getFirstTrackArtwork(playlist: Playlist): Promise<string> {
+    // Use the first track in the playlist
+    if (playlist.trackIds.length > 0) {
+      const tracks = await this.dataService.getAllTracks();
+      const firstTrack = tracks.find(track => track.id === playlist.trackIds[0]);
+      return firstTrack?.artwork || firstTrack?.imageUrl || 'assets/placeholder-playlist.png';
+    }
+    return 'assets/placeholder-playlist.png';
   }
 
   isCurrentlyPlaying(track: Track): boolean {
@@ -459,8 +440,6 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       duration: track.duration,
       imageUrl: track.album?.cover_medium || 'assets/placeholder-player.png',
       previewUrl: track.preview,
-      spotifyId: '',
-      liked: false,
       isLocal: false,
       source: 'stream',
       addedAt: new Date().toISOString(),

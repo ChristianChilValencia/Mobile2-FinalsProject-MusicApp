@@ -2,8 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { Track } from '../models/track.model';
-import { environment } from '../../environments/environment';
+import { Track } from './data.service';
 
 // Add DeezerTrack interface
 export interface DeezerTrack {
@@ -30,7 +29,6 @@ export interface DeezerTrack {
 })
 export class DeezerService {
   private readonly API_URL = 'https://deezerdevs-deezer.p.rapidapi.com/search';
-  // private readonly API_BASE_URL = 'https://deezerdevs-deezer.p.rapidapi.com';
   private readonly headers = new HttpHeaders({
     'X-RapidAPI-Key': '22b38b0583msh6ca6120bebde3a8p1a434cjsnfea3a2d94f6d',
     'X-RapidAPI-Host': 'deezerdevs-deezer.p.rapidapi.com'
@@ -53,17 +51,14 @@ export class DeezerService {
   }  
   
   getTrendingTracks(): Observable<DeezerTrack[]> {
-    // Using search for popular terms as a reliable way to get trending-like tracks
     return this.searchPopularTerms();
   }
 
   getExploreTracks(): Observable<DeezerTrack[]> {
-    // Using search for popular terms as a reliable way to get explore-like tracks
     return this.searchExploreTerms();
   }
   
   private searchPopularTerms(): Observable<DeezerTrack[]> {
-    // Use some popular search terms as a fallback
     const popularTerms = ['top hits', 'popular', 'chart', 'trending'];
     const randomTerm = popularTerms[Math.floor(Math.random() * popularTerms.length)];
     
@@ -82,7 +77,6 @@ export class DeezerService {
   }
 
   private searchExploreTerms(): Observable<DeezerTrack[]> {
-  // Use some popular search terms as a fallback
   const exploreTerms = ['rock', 'jazz', 'hip hop', 'classical', 'chill', 'relax', 'electronic', 'pop', 'metal', 'reggae', 'blues', 'country'];
   const randomTerm = exploreTerms[Math.floor(Math.random() * exploreTerms.length)];
   
@@ -141,8 +135,6 @@ export class DeezerService {
       duration: deezerTrack.duration || 0,
       imageUrl: deezerTrack.album?.cover_medium || 'assets/placeholder-player.png',
       previewUrl: deezerTrack.preview || '',
-      spotifyId: '',
-      liked: false,
       isLocal: false,
       source: 'stream',
       addedAt: new Date().toISOString(),

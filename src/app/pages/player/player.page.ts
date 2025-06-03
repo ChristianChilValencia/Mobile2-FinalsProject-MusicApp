@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActionSheetController, ToastController, NavController, AlertController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { DataService, PlaybackState, Track, RepeatMode } from '../../services/data.service';
+import { DataService, PlaybackState, Track } from '../../services/data.service';
 
 @Component({
   selector: 'app-player',
@@ -14,9 +14,6 @@ export class PlayerPage implements OnInit, OnDestroy {
   playbackState: PlaybackState | null = null;
   playbackSubscription: Subscription | null = null;
   isShuffleOn = false;
-  repeatMode: RepeatMode = RepeatMode.None;
-  // Make RepeatMode accessible in the template
-  RepeatMode = RepeatMode;
   
   // Add missing properties
   seekValue: number = 0;
@@ -92,21 +89,6 @@ export class PlayerPage implements OnInit, OnDestroy {
     }
   }
   
-  toggleRepeat() {
-    if (this.repeatMode === RepeatMode.None) {
-      this.repeatMode = RepeatMode.All;
-      this.showToast('Repeat all');
-    } else if (this.repeatMode === RepeatMode.All) {
-      this.repeatMode = RepeatMode.One;
-      this.showToast('Repeat one');
-    } else {
-      this.repeatMode = RepeatMode.None;
-      this.showToast('Repeat off');
-    }
-    
-    // Update the media player service
-    this.mediaPlayerService.setRepeatMode(this.repeatMode);
-  }
   async presentOptions() {
     if (!this.playbackState || !this.playbackState.currentTrack) return;
     

@@ -1,0 +1,14 @@
+{
+  "splash": {
+    "source": "resources/splash.png",
+    "background": "#000000"
+  },
+  "android": {
+    "splash": {
+      "splashFullScreen": true,
+      "splashImmersive": true,
+      "splashScaleType": "CENTER",
+      "splashShowDuration": 2000
+    }
+  }
+}

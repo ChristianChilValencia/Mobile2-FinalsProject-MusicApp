@@ -53,17 +53,10 @@ export class ConfigService {
           console.error('Error parsing saved settings:', e);
         }
       }
-
-      // Override with the theme setting if it exists (priority for backwards compatibility)
       if (themeResult && themeResult.value) {
         currentSettings.darkMode = themeResult.value === 'dark';
       }
-
-      // Update the settings subject
       this.settingsSubject.next(currentSettings);
-
-      // Apply the theme to the document
-      this.applyTheme(currentSettings.darkMode);
     } catch (error) {
       console.error('Error loading settings:', error);
     }
@@ -74,66 +67,6 @@ export class ConfigService {
     return this.settingsSubject.value;
   }
 
-  /** Set dark mode */
-  async setDarkMode(isDarkMode: boolean): Promise<void> {
-    // Update dark mode in settings
-    const updatedSettings = {
-      ...this.currentSettings,
-      darkMode: isDarkMode
-    };
-
-    try {
-      // Apply the theme to the document
-      this.applyTheme(isDarkMode);
-
-      // Save theme separately (for backwards compatibility)
-      await Preferences.set({
-        key: this.THEME_KEY,
-        value: isDarkMode ? 'dark' : 'light'
-      });
-
-      // Update the settings subject
-      this.settingsSubject.next(updatedSettings);
-
-      // Save all settings to storage
-      await this.updateSettings(updatedSettings);
-    } catch (error) {
-      console.error('Error setting dark mode:', error);
-    }
-  }
-
-  /** Apply theme to document */
-  private applyTheme(isDarkMode: boolean): void {
-    // Set the color-theme attribute for the entire app
-    document.body.setAttribute('color-theme', isDarkMode ? 'dark' : 'light');
-
-    // Apply or remove dark mode class for additional control
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      document.body.classList.remove('light-mode');
-    } else {
-      document.body.classList.add('light-mode');
-      document.body.classList.remove('dark-mode');
-    }
-  }
-
-  /** Set streaming quality */
-  async setStreamingQuality(quality: string): Promise<void> {
-    const updatedSettings = {
-      ...this.currentSettings,
-      streamingQuality: quality
-    };
-    await this.updateSettings(updatedSettings);
-  }
-
-  /** Set download quality */
-  async setDownloadQuality(quality: string): Promise<void> {
-    const updatedSettings = {
-      ...this.currentSettings,
-      downloadQuality: quality
-    };
-    await this.updateSettings(updatedSettings);
-  }
 
   /** Persist and emit new settings */
   private async updateSettings(settings: AppSettings): Promise<void> {
@@ -151,13 +84,4 @@ export class ConfigService {
     }
   }
 
-  /** Toggle dark mode */
-  async toggleDarkMode(): Promise<void> {
-    await this.setDarkMode(!this.currentSettings.darkMode);
-  }
-
-  /** Initialize theme on app startup */
-  initializeTheme(): void {
-    this.applyTheme(this.currentSettings.darkMode);
-  }
 }

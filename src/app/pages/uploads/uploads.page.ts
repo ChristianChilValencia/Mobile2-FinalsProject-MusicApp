@@ -4,7 +4,7 @@ import { ToastController, LoadingController, Platform, ActionSheetController, Al
 import { MediaPlayerService } from '../../services/media-player.service';
 import { Track } from '../../models/track.model';
 import { DataService as LocalDataService } from '../../services/data.service';
-import { ConfigService, AppSettings } from '../../services/config.service';
+// import { ConfigService, AppSettings } from '../../services/config.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -67,7 +67,7 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
   constructor(
     public audioService: MediaPlayerService,
     private dataService: LocalDataService,
-    private configService: ConfigService,
+    // private configService: ConfigService,
     public router: Router,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
@@ -76,12 +76,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     private alertCtrl: AlertController
   ) {}
   async ngOnInit() {
-    // Settings subscription
-    this.settingsSub = this.configService.settings$.subscribe((settings: AppSettings) => {
-      this.isDarkMode = settings.darkMode;
-      document.body.setAttribute('color-theme', settings.darkMode ? 'dark' : 'light');
-    });
-
     // Subscribe to playback state
     this.playbackSubscription = this.audioService.getPlaybackState().subscribe(state => {
       this.currentPlaybackState = state;
@@ -244,7 +238,9 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       await loading.dismiss();
       input.value = '';
     }
-  }  async playTrack(track: Track) {
+  }  
+  
+  async playTrack(track: Track) {
     try {
       // First add to recently played history
       await this.dataService.addToRecentlyPlayed(track.id);
@@ -273,6 +269,7 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       this.currentPlaybackState.currentTrack?.id === track.id
     );
   }  // Toggle play/pause for a track
+
   async togglePlayTrack(track: Track): Promise<void> {
     try {
       if (this.currentPlaybackState && this.currentPlaybackState.currentTrack?.id === track.id) {
@@ -349,6 +346,7 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
     
     await actionSheet.present();
   }  // Create a custom playlist with a track
+
   async createCustomPlaylist(track: Track) {
     const alert = await this.alertCtrl.create({
       header: 'New Playlist',
@@ -470,46 +468,6 @@ export class UploadsPage implements OnInit, OnDestroy {  @ViewChild('fileInput',
       header: 'Options',
       buttons
     });
-    
-    await actionSheet.present();  }
-
-  // Repair the database
-  async repairDatabase() {
-    const alert = await this.alertCtrl.create({
-      header: 'Repair Database',
-      message: 'This will attempt to repair any issues with the music database.',
-      buttons: [
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: 'Repair',
-          handler: async () => {
-            const loading = await this.loadingCtrl.create({
-              message: 'Repairing database...',
-            });
-            await loading.present();
-            
-            try {
-              // Perform the repair operation
-              await this.dataService.resetDatabase();
-              
-              this.showToast('Database repaired successfully');
-              
-              // Refresh the local music list
-              await this.refreshLocalMusic();
-            } catch (error) {
-              console.error('Error repairing database:', error);
-              this.showToast('Failed to repair database', 'danger');
-            } finally {
-              await loading.dismiss();
-            }
-          }
-        }
-      ]
-    });
-    
-    await alert.present();
+    await actionSheet.present();  
   }
 }

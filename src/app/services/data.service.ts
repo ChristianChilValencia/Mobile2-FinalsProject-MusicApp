@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-import { StorageService } from './storage.service';
+// import { StorageService } from './storage.service';
 import { v4 as uuidv4 } from 'uuid';
 import { BehaviorSubject } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
@@ -76,7 +76,7 @@ export class DataService {
   recentlyPlayed$ = this.recentlyPlayedSubject.asObservable();
   
   constructor(
-    private storageService: StorageService,
+    // private storageService: StorageService,
     private platform: Platform
   ) {
     this.sqlite = new SQLiteConnection(CapacitorSQLite);

@@ -76,7 +76,9 @@ export class MediaPlayerService {
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
     audio.volume = this.volume;
-  }  private setupAudioEvents() {
+  }  
+  
+  private setupAudioEvents() {
     // Common event handler setup for both players
     [this.audioPlayer, this.localAudioPlayer].forEach(player => {
       player.addEventListener('loadedmetadata', () => {
@@ -165,7 +167,9 @@ export class MediaPlayerService {
   private getCurrentPlayer(): HTMLAudioElement {
     const track = this.currentTrack$.getValue();
     return track?.isLocal ? this.localAudioPlayer : this.audioPlayer;
-  }  async play(track?: Track): Promise<void> {
+  }  
+  
+  async play(track?: Track): Promise<void> {
     try {
       if (!track) {
         const currentTrack = this.currentTrack$.value;
@@ -307,7 +311,9 @@ export class MediaPlayerService {
       console.error('Error in togglePlay:', error);
       this.isPlaying$.next(false);
       throw error;
-    }  }
+    }  
+  }
+
   async next(): Promise<void> {
     this.cleanup();
     if (!this.queue.length) return;
@@ -326,6 +332,7 @@ export class MediaPlayerService {
     // Then play the track
     await this.play(nextTrack);
   }
+
   async previous(): Promise<void> {
     this.cleanup();
     if (!this.queue.length) return;
@@ -376,20 +383,18 @@ export class MediaPlayerService {
   }
 
   async addLocalTrack(file: File): Promise<Track> {
-    try {      // Validate file
+    try {
       const validTypes = [
-        'audio/mpeg', 'audio/mp3',  // MP3
-        'audio/wav', 'audio/x-wav',  // WAV
-        'audio/ogg', 'audio/vorbis',  // OGG
-        'audio/aac', 'audio/x-m4a', 'audio/mp4', 'audio/m4a',  // AAC/M4A
-        'audio/flac', 'audio/x-flac',  // FLAC
-        'audio/opus'  // OPUS
+        'audio/mpeg', 'audio/mp3',
+        'audio/wav', 'audio/x-wav',
+        'audio/ogg', 'audio/vorbis',
+        'audio/aac', 'audio/x-m4a', 'audio/mp4', 'audio/m4a',
+        'audio/flac', 'audio/x-flac',
+        'audio/opus'
       ];
-      // Check if the MIME type or its variants are supported
       const isValidType = validTypes.some(type => file.type.toLowerCase() === type.toLowerCase());
       if (!isValidType) {
         console.warn(`Attempting to handle file type: ${file.type}`);
-        // Try to validate by extension as fallback
         const ext = file.name.split('.').pop()?.toLowerCase();
         const validExtensions = ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac', 'opus'];
         if (!ext || !validExtensions.includes(ext)) {
@@ -411,7 +416,6 @@ export class MediaPlayerService {
       let trackUri = '';
 
       if (this.platform.is('hybrid')) {
-        // Convert file to base64
         let fileArrayBuffer: ArrayBuffer;
         try {
           fileArrayBuffer = await file.arrayBuffer();

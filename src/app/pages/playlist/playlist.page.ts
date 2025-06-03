@@ -7,11 +7,11 @@ import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-playlist-stream',
-  templateUrl: './playlist-stream.page.html',
-  styleUrls: ['./playlist-stream.page.scss'],
+  templateUrl: './playlist.page.html',
+  styleUrls: ['./playlist.page.scss'],
   standalone: false
 })
-export class PlaylistStreamPage implements OnInit, OnDestroy {  playlist: Playlist | null = null;
+export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | null = null;
   playlistTracks: Track[] = [];
   isReordering = false;
   playlistId: string | null = null;

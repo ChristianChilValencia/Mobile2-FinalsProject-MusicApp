@@ -25,7 +25,7 @@ const routes: Routes = [
       },
       {
         path: 'playlist/:id',
-        loadChildren: () => import('../pages/playlist-stream/playlist-stream.module').then(m => m.PlaylistStreamPageModule)
+        loadChildren: () => import('../pages/playlist/playlist.module').then(m => m.PlaylistPageModule)
       },      {
         path: 'player',
         loadChildren: () => import('../pages/player/player.module').then(m => m.PlayerPageModule)

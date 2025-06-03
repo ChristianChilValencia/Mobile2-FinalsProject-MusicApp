@@ -23,12 +23,17 @@ const routes: Routes = [
     loadChildren: () => import('./pages/uploads/uploads.module').then( m => m.UploadsPageModule)
   },
   {
-    path: 'playlist-stream',
-    loadChildren: () => import('./pages/playlist-stream/playlist-stream.module').then( m => m.PlaylistStreamPageModule)
+    path: 'playlist',
+    loadChildren: () => import('./pages/playlist/playlist.module').then( m => m.PlaylistPageModule)
   },  {
     path: 'player',
     loadChildren: () => import('./pages/player/player.module').then( m => m.PlayerPageModule)
   },
+  {
+    path: 'playlist',
+    loadChildren: () => import('./pages/playlist/playlist.module').then( m => m.PlaylistPageModule)
+  },
+
 ];
 @NgModule({
   imports: [

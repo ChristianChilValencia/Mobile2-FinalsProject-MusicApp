@@ -30,7 +30,7 @@ export interface DeezerTrack {
 })
 export class DeezerService {
   private readonly API_URL = 'https://deezerdevs-deezer.p.rapidapi.com/search';
-  private readonly API_BASE_URL = 'https://deezerdevs-deezer.p.rapidapi.com';
+  // private readonly API_BASE_URL = 'https://deezerdevs-deezer.p.rapidapi.com';
   private readonly headers = new HttpHeaders({
     'X-RapidAPI-Key': '22b38b0583msh6ca6120bebde3a8p1a434cjsnfea3a2d94f6d',
     'X-RapidAPI-Host': 'deezerdevs-deezer.p.rapidapi.com'

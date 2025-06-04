@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { Track } from './data.service';
+import { DataService, Track } from './data.service';
 
 // Add DeezerTrack interface
 export interface DeezerTrack {
@@ -34,7 +34,10 @@ export class DeezerService {
     'X-RapidAPI-Host': 'deezerdevs-deezer.p.rapidapi.com'
   });
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private dataService: DataService
+  ) { }
 
   search(query: string): Observable<Track[]> {
     return this.http.get<any>(this.API_URL, {
@@ -142,5 +145,33 @@ export class DeezerService {
       artwork: deezerTrack.album?.cover_medium || null,
       type: 'mp3'
     };
+  }
+
+  /**
+   * Add a new track to the DataService from Deezer API result
+   * @param track The Deezer track to add
+   * @returns The saved Track object
+   */
+  async addDeezerTrackToLibrary(track: DeezerTrack): Promise<Track> {
+    const mappedTrack = this.mapDeezerTrackToTrack(track);
+    try {
+      const allTracks = await this.dataService.getAllTracks();
+      const existingTrack = allTracks.find((t: Track) => t.id === mappedTrack.id);
+      
+      if (!existingTrack) {
+        // Add new track to collection
+        await this.dataService.saveTracks([...allTracks, mappedTrack]);
+      } else {
+        // Update existing track
+        const updatedTracks = allTracks.map((t: Track) => 
+          t.id === mappedTrack.id ? mappedTrack : t
+        );
+        await this.dataService.saveTracks(updatedTracks);
+      }
+      return mappedTrack;
+    } catch (error) {
+      console.error('Error saving Deezer track:', error);
+      throw error;
+    }
   }
 }

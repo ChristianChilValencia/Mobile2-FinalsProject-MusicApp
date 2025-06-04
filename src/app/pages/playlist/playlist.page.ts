@@ -55,7 +55,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       await this.loadPlaylist(this.playlistId);
     }
   }
-
   async loadPlaylist(playlistId: string) {
     try {
       this.playlist = await this.dataService.getPlaylist(playlistId);
@@ -75,10 +74,10 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       }
     } catch (error) {
       console.error('Error loading playlist:', error);
-      this.showToast('Failed to load playlist', 'danger');
+      this.dataService.showToast('Failed to load playlist', 'danger');
       this.navController.navigateBack('/tabs/library');
     }
-  }  async playTrack(track: Track, index: number) {
+  }async playTrack(track: Track, index: number) {
     try {
       // Start playback from the selected track
       this.mediaPlayerService.setQueue(this.playlistTracks, index);
@@ -99,7 +98,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       this.mediaPlayerService.setQueue(shuffled, 0);
     }
   }
-
   async removeTrack(track: Track) {
     if (!this.playlist) return;
     
@@ -120,7 +118,7 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
               await this.loadPlaylist(this.playlist!.id);
             } catch (error) {
               console.error('Error removing track:', error);
-              this.showToast('Failed to remove track', 'danger');
+              this.dataService.showToast('Failed to remove track', 'danger');
             }
           }
         }
@@ -129,7 +127,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
     
     await alert.present();
   }
-
   async handleReorder(event: any) {
     // Get the item that was moved
     const itemMove = this.playlistTracks.splice(event.detail.from, 1)[0];
@@ -147,7 +144,7 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
         await this.dataService.savePlaylists([this.playlist]);
       } catch (error) {
         console.error('Error updating playlist order:', error);
-        this.showToast('Failed to update playlist order', 'danger');
+        this.dataService.showToast('Failed to update playlist order', 'danger');
       }
     }
   }
@@ -197,7 +194,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
     // Use the existing presentActionSheet method
     await this.presentActionSheet();
   }
-
   async editPlaylistDetails() {
     if (!this.playlist) return;
     
@@ -226,7 +222,7 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
           text: 'Save',
           handler: async (data) => {
             if (!data.name || data.name.trim() === '') {
-              this.showToast('Please enter a playlist name', 'warning');
+              this.dataService.showToast('Please enter a playlist name', 'warning');
               return false;
             }
             
@@ -242,7 +238,7 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
               return true;
             } catch (error) {
               console.error('Error updating playlist:', error);
-              this.showToast('Failed to update playlist', 'danger');
+              this.dataService.showToast('Failed to update playlist', 'danger');
               return false;
             }
           }
@@ -308,178 +304,41 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       return `${minutes} min`;
     }
   }
-
   // Check if a track is currently playing
   isCurrentlyPlaying(track: Track): boolean {
-    if (!this.currentPlaybackState) return false;
-    
-    return (
-      this.currentPlaybackState.isPlaying && 
-      this.currentPlaybackState.currentTrack?.id === track.id
-    );
+    return this.mediaPlayerService.isCurrentlyPlaying(track);
   }
-  
-  // Toggle play/pause for a track
+    // Toggle play/pause for a track
   togglePlayTrack(track: Track): void {
-    if (!this.currentPlaybackState) return;
+    if (!this.playlistTracks.length) return;
     
-    if (this.currentPlaybackState.currentTrack?.id === track.id) {
-      // The track is already the current track, toggle play/pause
-      this.mediaPlayerService.togglePlay();
-    } else {
-      // Get the index of the track in the playlist
-      const index = this.playlistTracks.findIndex(t => t.id === track.id);
-      if (index !== -1) {
+    // Get the index of the track in the playlist
+    const index = this.playlistTracks.findIndex(t => t.id === track.id);
+    if (index !== -1) {
+      if (this.mediaPlayerService.isCurrentlyPlaying(track)) {
+        // The track is already playing, just toggle play/pause
+        this.mediaPlayerService.togglePlay();
+      } else {
         // Start playing from this track in the playlist
         this.playTrack(track, index);
       }
     }
   }
-
   // Show options to add track to another playlist
   async showAddToPlaylistOptions(track: Track) {
-    // Get all playlists except the current one
-    const allPlaylists = await this.dataService.getAllPlaylists();
-    const playlists = allPlaylists.filter(p => p.id !== this.playlistId);
-    
-    const buttons = [];
-    
-    // Add create options
-    buttons.push({
-      text: 'Create Playlist',
-      handler: () => {
-        this.createCustomPlaylist(track);
-        return true;
-      }
-    });
-    
-    buttons.push({
-      text: `Create ${track.artist}'s Mix`,
-      handler: () => {
-        this.createArtistMix(track);
-        return true;
-      }
-    });
-    
-    // Add existing playlists
-    if (playlists.length > 0) {
-      playlists.forEach(playlist => {
-        buttons.push({
-          text: playlist.name,
-          handler: () => {
-            this.addTrackToPlaylist(track, playlist.id);
-            return true;
-          }
-        });
-      });
-    }
-    
-    // Add cancel button
-    buttons.push({
-      text: 'Cancel',
-      role: 'cancel',
-      handler: () => {
-        return true;
-      }
-    });
-    
-    const actionSheet = await this.actionSheetController.create({
-      header: 'Add to Playlist',
-      buttons
-    });
-    
-    await actionSheet.present();
+    await this.dataService.showAddToPlaylistOptions(track);
   }
-
   // Create a custom playlist with a track
   async createCustomPlaylist(track: Track) {
-    const alert = await this.alertController.create({
-      header: 'New Playlist',
-      inputs: [
-        {
-          name: 'name',
-          type: 'text',
-          placeholder: 'Enter playlist name'
-        },
-        {
-          name: 'description',
-          type: 'text',
-          placeholder: 'Description (optional)'
-        }
-      ],
-      buttons: [
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: 'Create',
-          handler: async (data) => {
-            if (!data.name || data.name.trim() === '') {
-              this.showToast('Please enter a playlist name', 'warning');
-              return false;
-            }
-            
-            try {
-              // Create the playlist with custom name
-              const playlist = await this.dataService.createPlaylist(data.name, data.description);
-              
-              // Add the track to the playlist
-              await this.dataService.addTrackToPlaylist(playlist.id, track.id);
-              
-              this.showToast(`Created playlist: ${data.name}`);
-              return true;
-            } catch (error) {
-              console.error('Error creating playlist:', error);
-              this.showToast('Failed to create playlist', 'danger');
-              return false;
-            }
-          }
-        }
-      ]
-    });
-    
-    await alert.present();
+    await this.dataService.createCustomPlaylistWithTrack(track);
   }
-
   // Create an artist mix playlist
   async createArtistMix(track: Track) {
-    try {
-      const artistName = track.artist || 'My';
-      const mixName = `${artistName}'s Mix`;
-      
-      // Create the playlist
-      const playlist = await this.dataService.createPlaylist(mixName);
-      
-      // Add the track to the playlist
-      await this.dataService.addTrackToPlaylist(playlist.id, track.id);
-      
-      this.showToast(`Created artist mix: ${mixName}`);
-      
-      return true;
-    } catch (error) {
-      console.error('Error creating artist mix:', error);
-      this.showToast('Failed to create artist mix', 'danger');
-      return false;
-    }
+    await this.dataService.createArtistMixWithTrack(track);
   }
-
   // Add track to an existing playlist
   async addTrackToPlaylist(track: Track, playlistId: string) {
-    try {
-      await this.dataService.addTrackToPlaylist(playlistId, track.id);
-      
-      // Get the playlist name
-      const playlist = await this.dataService.getPlaylist(playlistId);
-      const playlistName = playlist?.name || 'playlist';
-      
-      this.showToast(`Added to ${playlistName}`);
-      return true;
-    } catch (error) {
-      console.error('Error adding to playlist:', error);
-      this.showToast('Failed to add to playlist', 'danger');
-      return false;
-    }
+    await this.dataService.addTrackToPlaylistAndNotify(track, playlistId);
   }
 
   // Trigger the hidden file input when clicking on cover art
@@ -535,15 +394,7 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       input.value = '';
     }
   }
-
   private async showToast(message: string, color: string = 'success') {
-    const toast = await this.toastController.create({
-      message,
-      duration: 2000,
-      position: 'top',
-      color
-    });
-    
-    await toast.present();
+    await this.dataService.showToast(message, color);
   }
 }

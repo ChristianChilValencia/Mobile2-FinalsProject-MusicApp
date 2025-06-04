@@ -573,4 +573,35 @@ export class MediaPlayerService {
   getCurrentTime(): Observable<number> { return this.currentTime$.asObservable(); }
   getDuration(): Observable<number> { return this.duration$.asObservable(); }
   getPlaybackState(): Observable<PlaybackState> { return this.playbackState$.asObservable(); }
+
+  /**
+   * Checks if a track is currently playing
+   * @param track The track to check
+   * @returns True if the track is currently playing
+   */
+  isCurrentlyPlaying(track: Track): boolean {
+    const state = this.playbackState$.getValue();
+    return (
+      state.isPlaying && 
+      state.currentTrack?.id === track.id
+    );
+  }
+  
+  /**
+   * Toggles play/pause for a specific track
+   * If it's the current track, toggles play state
+   * If it's a different track, plays that track
+   * @param track The track to toggle
+   */
+  async togglePlayTrack(track: Track): Promise<void> {
+    const currentState = this.playbackState$.getValue();
+    
+    if (currentState.currentTrack?.id === track.id) {
+      // The track is already the current track, toggle play/pause
+      this.togglePlay();
+    } else {
+      // It's a different track, start playing it
+      await this.play(track);
+    }
+  }
 }

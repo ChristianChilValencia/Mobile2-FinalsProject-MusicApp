@@ -62,7 +62,6 @@ export class MiniPlayerComponent implements OnInit, OnDestroy {
     const newPosition = event.detail.value;
     const duration = this.playbackState.duration || 0;
     
-    // Ensure the position is within the track duration
     const limitedPosition = Math.min(newPosition, duration);
     this.mediaPlayerService.seek(limitedPosition);
   }

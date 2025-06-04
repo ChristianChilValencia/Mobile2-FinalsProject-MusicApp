@@ -102,12 +102,12 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
         this.loadingExplore = false;
       }
     );
-  }
-  async playTrendingTrack(track: DeezerTrack) {
+  }  async playTrendingTrack(track: DeezerTrack) {
     try {
       const trackToPlay = this.convertDeezerTrackToTrack(track);
 
-      await this.saveTrackIfNeeded(trackToPlay);
+      // Use the centralized method in DeezerService
+      await this.deezerService.addDeezerTrackToLibrary(track);
       
       await this.mediaPlayerService.play(trackToPlay);
       
@@ -116,14 +116,13 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       this.showToast('Could not play track', 'danger');
     }
   }
-  
-  async playExploreTrack(track: DeezerTrack) {
+    async playExploreTrack(track: DeezerTrack) {
     try {
       // Convert to our track format using the helper method
       const trackToPlay = this.convertDeezerTrackToTrack(track);
 
-      // First ensure the track is saved to the database correctly
-      await this.saveTrackIfNeeded(trackToPlay);
+      // Use the centralized method in DeezerService
+      await this.deezerService.addDeezerTrackToLibrary(track);
       
       // Use the play method to play the track directly
       await this.mediaPlayerService.play(trackToPlay);
@@ -196,33 +195,20 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
     }
     return 'assets/placeholder-playlist.png';
   }
-
   isCurrentlyPlaying(track: Track): boolean {
-    if (!this.currentPlaybackState) return false;
-    
-    return (
-      this.currentPlaybackState.isPlaying && 
-      this.currentPlaybackState.currentTrack?.id === track.id
-    );
+    return this.mediaPlayerService.isCurrentlyPlaying(track);
   }
     // Toggle play/pause for a track
   async togglePlayTrack(track: Track): Promise<void> {
-    if (this.currentPlaybackState?.currentTrack?.id === track.id) {
-      // The track is already the current track, toggle play/pause
-      this.mediaPlayerService.togglePlay();
-    } else {
-      // It's a different track, start playing it
-      await this.playTrack(track);
-    }
+    await this.mediaPlayerService.togglePlayTrack(track);
   }
-
   async addTrackToPlaylist(track: DeezerTrack) {
     try {
       // Convert DeezerTrack to our internal Track format
       const trackToAdd = this.convertDeezerTrackToTrack(track);
       
-      // Make sure the track is saved first
-      await this.saveTrackIfNeeded(trackToAdd);
+      // Make sure the track is saved first using centralized method
+      await this.deezerService.addDeezerTrackToLibrary(track);
       
       // Show the add to playlist options
       await this.showAddToPlaylistOptions(trackToAdd);
@@ -230,175 +216,45 @@ export class HomePage implements OnInit, OnDestroy {  currentMode = 'all';
       console.error('Error preparing to add track to playlist:', error);
     }
   }
-  
-  // Show options to add a track to playlist (similar to search page implementation)
+    // Show options to add a track to playlist (similar to search page implementation)
   async showAddToPlaylistOptions(track: Track) {
-    // Get all playlists
-    const playlists = await this.dataService.getAllPlaylists();
-    
-    const buttons: ActionSheetButton[] = [];
-    
-    // Add options to create new playlists (at the top, just like search page)
-    buttons.push({
-      text: `Create ${track.artist}'s Mix`,
-      handler: () => {
-        this.createArtistMixWithTrack(track);
-        return true;
-      }
-    });
-    
-    buttons.push({
-      text: 'Create Playlist',
-      handler: () => {
-        this.createCustomPlaylistWithTrack(track);
-        return true;
-      }
-    });
-    
-    // Add existing playlists
-    if (playlists.length > 0) {
-      playlists.forEach(playlist => {
-        buttons.push({
-          text: playlist.name,
-          handler: () => {
-            this.addTrackToExistingPlaylist(track, playlist.id);
-            return true;
-          }
-        });
-      });
-    }
-    
-    // Add cancel button
-    buttons.push({
-      text: 'Cancel',
-      role: 'cancel'
-    });
-    
-    const actionSheet = await this.actionSheetController.create({
-      header: 'Add to Playlist',
-      buttons
-    });
-    
-    await actionSheet.present();
+    await this.dataService.showAddToPlaylistOptions(track);
   }
-    // Add a track to an existing playlist
+  // Add a track to an existing playlist
   async addTrackToExistingPlaylist(track: Track, playlistId: string) {
     try {
-      // First, make sure the track is saved in our data service
-      const filePath = track.pathOrUrl || track.previewUrl;
-      await this.dataService.saveLocalMusic(track, filePath);
-      
       // Ensure track is in collection
       await this.saveTrackIfNeeded(track);
       
-      // Add to playlist
-      await this.dataService.addTrackToPlaylist(playlistId, track.id);
-      
-      // Get playlist name for toast message
-      const playlist = await this.dataService.getPlaylist(playlistId);
-      const playlistName = playlist?.name || 'playlist';
-      
-      this.showToast(`Added to ${playlistName}`);
+      // Use the centralized method to add track to playlist
+      await this.dataService.addTrackToPlaylistAndNotify(track, playlistId);
     } catch (error) {
       console.error('Error adding to playlist:', error);
     }
-  }  // Create a custom playlist with a track
-  async createCustomPlaylistWithTrack(track: Track) {
+  }  async createCustomPlaylistWithTrack(track: Track) {
     try {
-      // First, make sure the track is saved in our data service
-      const filePath = track.pathOrUrl || track.previewUrl;
-      await this.dataService.saveLocalMusic(track, filePath);
-      
       // Ensure track is in collection before continuing
       await this.saveTrackIfNeeded(track);
       
-      // Show an alert for custom playlist name
-      const alert = await this.alertController.create({
-        header: 'New Playlist',
-        inputs: [
-          {
-            name: 'name',
-            type: 'text',
-            placeholder: 'Playlist Name'
-          },
-          {
-            name: 'description',
-            type: 'text',
-            placeholder: 'Description (optional)'
-          }
-        ],
-        buttons: [
-          {
-            text: 'Cancel',
-            role: 'cancel'
-          },
-          {
-            text: 'Create',
-            handler: async (data) => {
-              if (!data.name || data.name.trim() === '') {
-                this.showToast('Please enter a playlist name', 'warning');
-                return false;
-              }
-              
-              try {
-                // Create the playlist with custom name
-                const playlist = await this.dataService.createPlaylist(data.name, data.description);
-                
-                // Verify track exists in collection before adding to playlist
-                const allTracks = await this.dataService.getAllTracks();
-                if (!allTracks.some(t => t.id === track.id)) {
-                  console.log('Track not found in collection, saving it again...');
-                  await this.saveTrackIfNeeded(track);
-                }
-                
-                // Add the track to the playlist
-                await this.dataService.addTrackToPlaylist(playlist.id, track.id);
-                
-                this.showToast(`Created playlist: ${data.name}`);
-                return true;
-              } catch (error) {
-                console.error('Error creating playlist:', error);
-                return false;
-              }
-            }
-          }
-        ]
-      });
-      
-      await alert.present();
+      // Use the centralized method to create a custom playlist with track
+      await this.dataService.createCustomPlaylistWithTrack(track);
     } catch (error) {
       console.error('Error preparing to create playlist:', error);
     }
-  }  
-  
-  async createArtistMixWithTrack(track: Track) {
+  }
+    async createArtistMixWithTrack(track: Track) {
     try {
-      const filePath = track.pathOrUrl || track.previewUrl;
-      await this.dataService.saveLocalMusic(track, filePath);
-      
+      // Ensure track is in collection
       await this.saveTrackIfNeeded(track);
       
-      const artistName = track.artist || 'My';
-      const mixName = `${artistName}'s Mix`;
-      
-      const playlist = await this.dataService.createPlaylist(mixName);
-      
-      await this.dataService.addTrackToPlaylist(playlist.id, track.id);
-      
-      this.showToast(`Created artist mix: ${mixName}`);
+      // Use the centralized method to create an artist mix
+      await this.dataService.createArtistMixWithTrack(track);
     } catch (error) {
       console.error('Error creating artist mix:', error);
     }
   }
-
   async showToast(message: string, color: string = 'success') {
-    const toast = await this.toastController.create({
-      message,
-      duration: 2000,
-      position: 'top',
-      color
-    });
-    await toast.present();
+    await this.dataService.showToast(message, color);
   }
 
   convertDeezerTrackToTrack(track: DeezerTrack): Track {

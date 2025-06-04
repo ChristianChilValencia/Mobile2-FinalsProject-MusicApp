@@ -47,26 +47,13 @@ export class UploadsPage implements OnInit, OnDestroy {
       this.playbackSubscription = null;
     }
   }
-
   async doRefresh(event: any) {
     try {
       await this.refreshLocalMusic();
-      const toast = await this.toastCtrl.create({
-        message: 'Music library refreshed',
-        duration: 2000,
-        position: 'top',
-        color: 'success'
-      });
-      await toast.present();
+      await this.dataService.showToast('Music library refreshed');
     } catch (error) {
       console.error('Error refreshing library:', error);
-      const toast = await this.toastCtrl.create({
-        message: 'Failed to refresh music library',
-        duration: 2000,
-        position: 'top',
-        color: 'danger'
-      });
-      await toast.present();
+      await this.dataService.showToast('Failed to refresh music library', 'danger');
     } finally {
       if (event) {
         event.target.complete();
@@ -104,16 +91,10 @@ export class UploadsPage implements OnInit, OnDestroy {
     }
     return true; 
   }
-
   async openFileSelector() {
     const hasPermissions = await this.requestAudioPermissions();
     if (!hasPermissions) {
-      const toast = await this.toastCtrl.create({
-        message: 'Permission denied to access files',
-        duration: 2000,
-        color: 'danger'
-      });
-      await toast.present();
+      await this.dataService.showToast('Permission denied to access files', 'danger');
       return;
     }
     this.fileInput.nativeElement.click();
@@ -175,154 +156,34 @@ export class UploadsPage implements OnInit, OnDestroy {
       input.value = '';
     }
   }  
-
   async playTrack(track: Track) {
     try {
       await this.audioService.setQueue([track], 0);
       await this.router.navigate(['tabs/player']);
     } catch (error) {
       console.error('Error playing track:', error);
-      const toast = await this.toastCtrl.create({
-        message: 'Failed to play track',
-        duration: 2000,
-        position: 'top',
-        color: 'danger'
-      });
-      await toast.present();
+      await this.dataService.showToast('Failed to play track', 'danger');
     }
   }
-
   isCurrentlyPlaying(track: Track): boolean {
-    if (!this.currentPlaybackState) return false;
-    
-    return (
-      this.currentPlaybackState.isPlaying && 
-      this.currentPlaybackState.currentTrack?.id === track.id
-    );
-  } 
-  
-  async togglePlayTrack(track: Track): Promise<void> {
+    return this.audioService.isCurrentlyPlaying(track);
+  }
+    async togglePlayTrack(track: Track): Promise<void> {
     try {
-      if (this.currentPlaybackState && this.currentPlaybackState.currentTrack?.id === track.id) {
-        await this.audioService.togglePlay();
-      } else {
-        await this.playTrack(track);
+      await this.audioService.togglePlayTrack(track);
+      if (!this.currentPlaybackState?.isPlaying) {
+        await this.router.navigate(['tabs/player']);
       }
     } catch (error) {
       console.error('Error toggling play state:', error);
-      const toast = await this.toastCtrl.create({
-        message: 'Failed to play track',
-        duration: 2000,
-        position: 'top',
-        color: 'danger'
-      });
-      await toast.present();
+      await this.dataService.showToast('Failed to play track', 'danger');
     }
   }
-
   async addToPlaylist(track: Track) {
-    // Get all playlists
-    const playlists = await this.dataService.getAllPlaylists();
-    
-    const buttons = [];
-    
-    // Add create playlist and artist mix options
-    buttons.push({
-      text: 'Create Playlist',
-      handler: () => {
-        this.createCustomPlaylist(track);
-        return true;
-      }
-    });
-    
-    buttons.push({
-      text: `Create ${track.artist}'s Mix`,
-      handler: () => {
-        this.createArtistMix(track);
-        return true;
-      }
-    });
-    
-    // Add existing playlists
-    if (playlists.length > 0) {
-      playlists.forEach(playlist => {
-        buttons.push({
-          text: playlist.name,
-          handler: () => {
-            this.dataService.addTrackToPlaylist(playlist.id, track.id)
-              .then(() => this.showToast(`Added to ${playlist.name}`))
-              .catch(err => this.showToast('Failed to add to playlist', 'danger'));
-            return true;
-          }
-        });
-      });
-    }
-
-    buttons.push({
-      text: 'Cancel',
-      role: 'cancel',
-      handler: () => {
-        return true;
-      }
-    });
-    
-    const actionSheet = await this.actionSheetCtrl.create({
-      header: 'Add to Playlist',
-      buttons
-    });
-    
-    await actionSheet.present();
-  }  
-  
-  async createCustomPlaylist(track: Track) {
-    const alert = await this.alertCtrl.create({
-      header: 'New Playlist',
-      inputs: [
-        {
-          name: 'name',
-          type: 'text',
-          placeholder: 'Enter playlist name'
-        },
-        {
-          name: 'description',
-          type: 'text',
-          placeholder: 'Description (optional)'
-        }
-      ],
-      buttons: [
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: 'Create',
-          handler: async (data) => {
-            if (!data.name || data.name.trim() === '') {
-              this.showToast('Please enter a playlist name', 'warning');
-              return false;
-            }
-            
-            try {
-              // Create the playlist with custom name
-              const playlist = await this.dataService.createPlaylist(data.name, data.description);
-              
-              // Add the track to the playlist
-              await this.dataService.addTrackToPlaylist(playlist.id, track.id);
-              
-              this.showToast(`Created playlist: ${data.name}`);
-              return true;
-            } catch (error) {
-              console.error('Error creating playlist:', error);
-              this.showToast('Failed to create playlist', 'danger');
-              return false;
-            }
-          }
-        }
-      ]
-    });
-    
-    await alert.present();
-    return false;
+    await this.dataService.showAddToPlaylistOptions(track);
+  }
+    async createCustomPlaylist(track: Track) {
+    await this.dataService.createCustomPlaylistWithTrack(track);
   }
   
   async deleteTrack(track: Track) {
@@ -338,14 +199,13 @@ export class UploadsPage implements OnInit, OnDestroy {
           text: 'Delete',
           role: 'destructive',
           handler: async () => {
-            try {
-              await this.dataService.removeTrack(track.id);
-              this.showToast('Track deleted');
+            try {              await this.dataService.removeTrack(track.id);
+              await this.dataService.showToast('Track deleted');
               await this.refreshLocalMusic();
               return true;
             } catch (error) {
               console.error('Error deleting track:', error);
-              this.showToast('Failed to delete track', 'danger');
+              await this.dataService.showToast('Failed to delete track', 'danger');
               return false;
             }
           }
@@ -354,35 +214,7 @@ export class UploadsPage implements OnInit, OnDestroy {
     });
     
     await alert.present();
-  }
-
-  async createArtistMix(track: Track) {
-    try {
-      const artistName = track.artist || 'My';
-      const mixName = `${artistName}'s Mix`;
-      
-      const playlist = await this.dataService.createPlaylist(mixName);
-      
-      await this.dataService.addTrackToPlaylist(playlist.id, track.id);
-      
-      this.showToast(`Created artist mix: ${mixName}`);
-      
-      return true;
-    } catch (error) {
-      console.error('Error creating artist mix:', error);
-      this.showToast('Failed to create artist mix', 'danger');
-      return false;
-    }
-  }
-
-  async showToast(message: string, color: string = 'success') {
-    const toast = await this.toastCtrl.create({
-      message,
-      duration: 2000,
-      position: 'top',
-      color
-    });
-    
-    await toast.present();
+  }  async createArtistMix(track: Track) {
+    await this.dataService.createArtistMixWithTrack(track);
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Platform } from '@ionic/angular';
+import { Platform, ToastController, ActionSheetController, AlertController } from '@ionic/angular';
 import { v4 as uuidv4 } from 'uuid';
 import { BehaviorSubject } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
@@ -72,9 +72,11 @@ export class DataService {
   
   tracks$ = this.tracksSubject.asObservable();
   playlists$ = this.playlistsSubject.asObservable();
-  
-  constructor(
-    private platform: Platform
+    constructor(
+    private platform: Platform,
+    private toastController: ToastController,
+    private actionSheetController: ActionSheetController,
+    private alertController: AlertController
   ) {
     this.sqlite = new SQLiteConnection(CapacitorSQLite);
     this.loadTracks();
@@ -486,5 +488,181 @@ export class DataService {
       console.error(`Error setting ${key} in storage:`, error);
       throw error;
     }
+  }
+
+  // UI Helper Methods to reduce duplication across components
+
+  /**
+   * Shows a toast notification
+   * @param message Message to display
+   * @param color Toast color (success, warning, danger)
+   * @returns Promise that resolves when the toast is presented
+   */
+  async showToast(message: string, color: string = 'success'): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 2000,
+      position: 'top',
+      color
+    });
+    
+    await toast.present();
+  }
+
+  /**
+   * Show an action sheet for adding a track to playlists
+   * @param track The track to add to a playlist
+   * @returns Promise that resolves when the sheet is presented
+   */
+  async showAddToPlaylistOptions(track: Track): Promise<void> {
+    // Get all playlists
+    const playlists = await this.getAllPlaylists();
+    const buttons: any[] = [];
+
+    // Create artist mix option
+    buttons.push({
+      text: `Create ${track.artist}'s Mix`,
+      handler: () => {
+        this.createArtistMixWithTrack(track);
+        return true;
+      }
+    });
+    
+    // Create custom playlist option
+    buttons.push({
+      text: 'Create Playlist',
+      handler: () => {
+        this.createCustomPlaylistWithTrack(track);
+        return true;
+      }
+    });
+
+    // Add existing playlists
+    if (playlists.length > 0) {
+      playlists.forEach(playlist => {
+        buttons.push({
+          text: playlist.name,
+          handler: () => {
+            this.addTrackToPlaylistAndNotify(track, playlist.id);
+            return true;
+          }
+        });
+      });
+    }
+
+    // Add cancel button
+    buttons.push({
+      text: 'Cancel',
+      role: 'cancel'
+    });
+
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Add to Playlist',
+      buttons
+    });
+
+    await actionSheet.present();
+  }
+
+  /**
+   * Create an artist mix with a track and show notifications
+   * @param track The track to use for the mix
+   */
+  async createArtistMixWithTrack(track: Track): Promise<void> {
+    const newPlaylistName = `${track.artist}'s Mix`;
+    
+    try {
+      // Create the playlist
+      const playlist = await this.createPlaylist(newPlaylistName);
+      
+      // Save the track and add it to the playlist
+      const filePath = track.pathOrUrl || track.previewUrl;
+      await this.saveLocalMusic(track, filePath);
+      await this.addTrackToPlaylist(playlist.id, track.id);
+      
+      await this.showToast(`Created artist mix: ${newPlaylistName}`);
+    } catch (error) {
+      console.error('Error creating artist mix:', error);
+      await this.showToast('Failed to create artist mix', 'danger');
+    }
+  }
+
+  /**
+   * Add a track to a playlist and show notification
+   * @param track The track to add
+   * @param playlistId The playlist ID
+   */
+  async addTrackToPlaylistAndNotify(track: Track, playlistId: string): Promise<void> {
+    try {
+      // First, make sure the track is saved in our data service
+      const filePath = track.pathOrUrl || track.previewUrl;
+      await this.saveLocalMusic(track, filePath);
+      
+      // Then add it to the playlist
+      await this.addTrackToPlaylist(playlistId, track.id);
+      
+      const playlist = await this.getPlaylist(playlistId);
+      await this.showToast(`Added to ${playlist?.name || 'playlist'}`);
+    } catch (error) {
+      console.error('Error adding to playlist:', error);
+      await this.showToast('Failed to add to playlist', 'danger');
+    }
+  }
+
+  /**
+   * Create a custom playlist with a track
+   * @param track The track to add to the new playlist
+   */
+  async createCustomPlaylistWithTrack(track: Track): Promise<void> {
+    // Show an alert for custom playlist name
+    const alert = await this.alertController.create({
+      header: 'New Playlist',
+      inputs: [
+        {
+          name: 'name',
+          type: 'text',
+          placeholder: 'Playlist Name'
+        },
+        {
+          name: 'description',
+          type: 'text',
+          placeholder: 'Description (optional)'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'Create',
+          handler: async (data) => {
+            if (!data.name || data.name.trim() === '') {
+              await this.showToast('Please enter a playlist name', 'warning');
+              return false;
+            }
+            
+            try {
+              // Create the playlist with custom name
+              const playlist = await this.createPlaylist(data.name, data.description);
+              
+              // Save the track and add it to the playlist
+              const filePath = track.pathOrUrl || track.previewUrl;
+              await this.saveLocalMusic(track, filePath);
+              await this.addTrackToPlaylist(playlist.id, track.id);
+              
+              await this.showToast(`Created playlist: ${data.name}`);
+              return true;
+            } catch (error) {
+              console.error('Error creating playlist:', error);
+              await this.showToast('Failed to create playlist', 'danger');
+              return false;
+            }
+          }
+        }
+      ]
+    });
+    
+    await alert.present();
   }
 }

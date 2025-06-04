@@ -201,16 +201,8 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     
     await alert.present();
   }  
-  
-  private async showToast(message: string, color: string = 'success') {
-    const toast = await this.toastController.create({
-      message,
-      duration: 2000,
-      position: 'top',
-      color
-    });
-    
-    await toast.present();
+    private async showToast(message: string, color: string = 'success') {
+    await this.dataService.showToast(message, color);
   }
 
   async refreshLibrary(event?: any) {

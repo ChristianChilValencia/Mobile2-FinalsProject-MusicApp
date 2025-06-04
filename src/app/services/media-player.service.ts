@@ -309,10 +309,8 @@ export class MediaPlayerService {
     if (!this.queue.length) return;
     this.queueIndex = (this.queueIndex + 1) % this.queue.length;
     
-    // Get the next track
     const nextTrack = this.queue[this.queueIndex];
     
-    // Then play the track
     await this.play(nextTrack);
   }
 
@@ -327,10 +325,8 @@ export class MediaPlayerService {
     } else {
       this.queueIndex = (this.queueIndex - 1 + this.queue.length) % this.queue.length;
       
-      // Get the previous track
       const prevTrack = this.queue[this.queueIndex];
       
-      // Then play the track
       await this.play(prevTrack);
     }
   }
@@ -378,8 +374,7 @@ export class MediaPlayerService {
         }
       }
 
-      // Check file size (max 50MB)
-      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; 
       if (file.size > MAX_FILE_SIZE) {
         throw new Error(`File size exceeds 50MB limit: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
       }
@@ -409,14 +404,12 @@ export class MediaPlayerService {
         }
 
         try {
-          // Ensure music directory exists
           await Filesystem.mkdir({
             path: 'music',
             directory: Directory.Data,
             recursive: true
           });
         } catch (error) {
-          // Ignore if directory already exists
           const err = error as { message?: string };
           if (err.message && !err.message.includes('exists')) {
             console.error('Error creating music directory:', error);
@@ -424,7 +417,6 @@ export class MediaPlayerService {
           }
         }
 
-        // Save file
         try {
           const savedFile = await Filesystem.writeFile({
             path: trackFilePath,
@@ -437,7 +429,6 @@ export class MediaPlayerService {
           throw new Error(`Failed to write file: ${err.message || 'Unknown error'}`);
         }
       } else {
-        // Web platform - use blob URLs
         trackUri = URL.createObjectURL(file);
       }
 
@@ -524,7 +515,6 @@ export class MediaPlayerService {
     this.queueIndex = startIndex;
     
     if (tracks.length) {
-      // Then play the track with proper error handling
       try {
         console.log('Playing track from queue:', tracks[startIndex]);
         await this.play(tracks[startIndex]);
@@ -536,7 +526,8 @@ export class MediaPlayerService {
   }
 
   async clearCurrentTrack(): Promise<void> {
-    try {      await this.pause();
+    try {      
+      await this.pause();
       this.currentTrack$.next(null);
       this.isPlaying$.next(false);
       this.currentTime$.next(0);
@@ -552,15 +543,7 @@ export class MediaPlayerService {
       console.error('Error clearing current track:', error);
     }
   }
-
-  // Playback state management
-  setVolume(volume: number): void {
-    this.volume = Math.max(0, Math.min(1, volume));
-    this.audioPlayer.volume = this.volume;
-    this.localAudioPlayer.volume = this.volume;
-    this.updatePlaybackState();
-  }
-
+  
   setShuffle(isActive: boolean): void {
     this.isShuffleActive = isActive;
     this.updatePlaybackState();
@@ -585,7 +568,6 @@ export class MediaPlayerService {
     });
   }
 
-  // GETTERS FOR OBSERVABLE DATA
   getCurrentTrack(): Observable<Track|null> { return this.currentTrack$.asObservable(); }
   getIsPlaying(): Observable<boolean> { return this.isPlaying$.asObservable(); }
   getCurrentTime(): Observable<number> { return this.currentTime$.asObservable(); }

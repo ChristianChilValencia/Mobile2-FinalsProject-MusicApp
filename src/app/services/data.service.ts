@@ -33,8 +33,6 @@ export interface Playlist {
   description?: string;
   trackIds: string[];
   coverArt?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface PlaybackState {
@@ -53,19 +51,16 @@ export interface PlaybackState {
 })
 export class DataService {
   getPlaylistCoverArt(playlist: Playlist): string | PromiseLike<string | null> | null {
-    // If the playlist has a coverArt, return it
     if (playlist.coverArt) {
       return playlist.coverArt;
     }
     
-    // If the playlist has tracks, use the artwork of the first track
     if (playlist.trackIds.length > 0) {
       const firstTrackId = playlist.trackIds[0];
       const track = this.tracksSubject.value.find(t => t.id === firstTrackId);
       return track?.artwork || track?.imageUrl || 'assets/placeholder-playlist.png';
     }
     
-    // Fallback to placeholder
     return 'assets/placeholder-playlist.png';
   }
 
@@ -85,45 +80,12 @@ export class DataService {
     this.loadTracks();
     this.loadPlaylists();
 }
-  // Add a method to run database migrations
-  private async runDatabaseMigrations(): Promise<void> {
-    try {
-      if (!this.db) {
-        console.error('Database not initialized');
-        return;
-      }
-
-      console.log('Running database migrations...');
-      
-      // Check if last_played column exists
-      const tableInfo = await this.db.query("PRAGMA table_info(tracks);");
-      const columns = tableInfo.values || [];
-      const columnNames = columns.map((col: any) => col.name);
-      
-      // Add last_played column if it doesn't exist
-      if (!columnNames.includes('last_played')) {
-        console.log('Adding last_played column to tracks table');
-        await this.db.execute('ALTER TABLE tracks ADD COLUMN last_played TEXT;');
-      }
-      
-      // Add added_at column if it doesn't exist
-      if (!columnNames.includes('added_at')) {
-        console.log('Adding added_at column to tracks table');
-        await this.db.execute('ALTER TABLE tracks ADD COLUMN added_at TEXT;');
-      }
-      
-      console.log('Database migrations completed');
-    } catch (error) {
-      console.error('Error running database migrations:', error);
-    }
-  }
 
   async ensureInit(): Promise<void> {
     if (this._initPromise) return this._initPromise;        this._initPromise = (async () => {
       try {
         await this.platform.ready();
         
-        // Initialize SQLite
         if (this.platform.is('hybrid')) {
           await this.sqlite.checkConnectionsConsistency();
           this.db = await this.sqlite.createConnection('harmony.db', false, 'no-encryption', 1, false);
@@ -133,7 +95,6 @@ export class DataService {
         }
         await this.db.open();
 
-        // First, create tables if they don't exist
         const sql = `
           CREATE TABLE IF NOT EXISTS playlists (
             id           TEXT PRIMARY KEY,
@@ -179,9 +140,6 @@ export class DataService {
           );`;
 
         await this.db.execute(sql);
-        
-        // Run database migration to add missing columns if they don't exist
-        await this.runDatabaseMigrations();
         
         // Load local tracks from SQLite
         if (this.platform.is('hybrid')) {
@@ -336,12 +294,9 @@ export class DataService {
           console.error('Error closing db connection:', err);
         }
       }
-        // Force a clean initialization
+
       this._initPromise = null;
       await this.ensureInit();
-      
-      // Run migrations to ensure all columns exist
-      await this.runDatabaseMigrations();
       
       console.log('Database reset completed');
       
@@ -380,8 +335,6 @@ export class DataService {
       name,
       description,
       trackIds: [],
-      createdAt: now,
-      updatedAt: now
     };
     
     playlists.push(newPlaylist);
@@ -402,7 +355,6 @@ export class DataService {
     // Add track if not already in playlist
     if (!playlist.trackIds.includes(trackId)) {
       playlist.trackIds.push(trackId);
-      playlist.updatedAt = new Date().toISOString();
       this.playlistsSubject.next([...playlists]);
       await this.savePlaylists(playlists);
     }
@@ -417,11 +369,9 @@ export class DataService {
         throw new Error(`Playlist with ID ${playlistId} not found`);
       }
       
-      // Remove track if present in playlist
       const trackIndex = playlist.trackIds.indexOf(trackId);
       if (trackIndex !== -1) {
         playlist.trackIds.splice(trackIndex, 1);
-        playlist.updatedAt = new Date().toISOString();
         this.playlistsSubject.next([...playlists]);
         await this.savePlaylists(playlists);
       }
@@ -451,13 +401,11 @@ export class DataService {
         throw new Error(`Playlist with ID ${playlistId} not found`);
       }
       
-      // Update playlist details
       playlist.name = name;
       playlist.description = description;
       if (coverArt) {
         playlist.coverArt = coverArt;
       }
-      playlist.updatedAt = new Date().toISOString();
       
       this.playlistsSubject.next([...playlists]);
       await this.savePlaylists(playlists);
@@ -502,7 +450,6 @@ export class DataService {
         playlist.trackIds = playlist.trackIds.filter(id => id !== trackId);
         
         if (playlist.trackIds.length !== initialLength) {
-          playlist.updatedAt = new Date().toISOString();
           playlistsChanged = true;
         }
       });

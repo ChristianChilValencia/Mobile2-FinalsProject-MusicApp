@@ -18,41 +18,8 @@ export class UploadsPage implements OnInit, OnDestroy {
 
   localMusic: Track[] = [];  
   private settingsSub?: Subscription;
-
-  // Current playback state
   private playbackSubscription: Subscription | null = null;
   currentPlaybackState: any = null;
-  // Track deletion
-  async deleteTrack(track: Track) {
-    const alert = await this.alertCtrl.create({
-      header: 'Delete Track',
-      message: `Are you sure you want to delete "${track.title}"?`,
-      buttons: [
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: 'Delete',
-          role: 'destructive',
-          handler: async () => {
-            try {
-              await this.dataService.removeTrack(track.id);
-              this.showToast('Track deleted');
-              await this.refreshLocalMusic();
-              return true;
-            } catch (error) {
-              console.error('Error deleting track:', error);
-              this.showToast('Failed to delete track', 'danger');
-              return false;
-            }
-          }
-        }
-      ]
-    });
-    
-    await alert.present();
-  }
 
   constructor(
     public audioService: MediaPlayerService,
@@ -60,10 +27,10 @@ export class UploadsPage implements OnInit, OnDestroy {
     public router: Router,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
-    private platform: Platform,
     private actionSheetCtrl: ActionSheetController,
     private alertCtrl: AlertController
   ) {}
+
   async ngOnInit() {
     this.playbackSubscription = this.audioService.getPlaybackState().subscribe(state => {
       this.currentPlaybackState = state;
@@ -84,7 +51,6 @@ export class UploadsPage implements OnInit, OnDestroy {
   async doRefresh(event: any) {
     try {
       await this.refreshLocalMusic();
-      // Show a success toast
       const toast = await this.toastCtrl.create({
         message: 'Music library refreshed',
         duration: 2000,
@@ -94,7 +60,6 @@ export class UploadsPage implements OnInit, OnDestroy {
       await toast.present();
     } catch (error) {
       console.error('Error refreshing library:', error);
-      // Show an error toast
       const toast = await this.toastCtrl.create({
         message: 'Failed to refresh music library',
         duration: 2000,
@@ -103,7 +68,6 @@ export class UploadsPage implements OnInit, OnDestroy {
       });
       await toast.present();
     } finally {
-      // Complete the refresher
       if (event) {
         event.target.complete();
       }
@@ -112,15 +76,13 @@ export class UploadsPage implements OnInit, OnDestroy {
   
   private async refreshLocalMusic() {
     try {
-      // Get only local tracks (strict matching for source and isLocal)
       const allTracks = await this.dataService.getAllTracks();
       const localTracks = allTracks.filter(track => track.source === 'local' && track.isLocal === true);
       
-      // Sort by upload date (newest first)
       this.localMusic = localTracks.sort((a, b) => {
         const dateA = new Date(a.addedAt || 0).getTime();
         const dateB = new Date(b.addedAt || 0).getTime();
-        return dateB - dateA; // Sort by newest first
+        return dateB - dateA; 
       });
       
       return this.localMusic;
@@ -140,7 +102,7 @@ export class UploadsPage implements OnInit, OnDestroy {
         return false;
       }
     }
-    return true; // In web, permissions work differently
+    return true; 
   }
 
   async openFileSelector() {
@@ -171,15 +133,12 @@ export class UploadsPage implements OnInit, OnDestroy {
     try {
       for (const file of files) {
         try {
-          const track = await this.audioService.addLocalTrack(file);          results.success++;
+          const track = await this.audioService.addLocalTrack(file);          
+          results.success++;
           successfulTracks.push(track);
-          
-          // Don't show success toast for single file uploads
         } catch (error) {
           results.failed++;
           console.error('Error processing file:', error);
-          
-          // Show detailed error for single file uploads
           if (files.length === 1) {
             const errMessage = error instanceof Error ? error.message : 'Unknown error occurred';            const errToast = await this.toastCtrl.create({
               message: `Error uploading ${file.name}: ${errMessage}`,
@@ -192,19 +151,16 @@ export class UploadsPage implements OnInit, OnDestroy {
         }
       }
 
-      // Show summary toast for multiple files
-      if (files.length > 1) {        const summaryToast = await this.toastCtrl.create({
+      if (files.length > 1) {        
+        const summaryToast = await this.toastCtrl.create({
           message: `Upload complete: ${results.success} succeeded, ${results.failed} failed`,
           duration: 3000,
           position: 'top',
           color: results.failed ? 'warning' : 'success'
         });
         await summaryToast.present();
-      }      // Refresh the local music list to show the new tracks
+      }
       await this.refreshLocalMusic();
-
-      // Don't automatically play the uploaded track
-
     } catch (error) {
       console.error('Error in upload process:', error);
       const errToast = await this.toastCtrl.create({
@@ -219,11 +175,10 @@ export class UploadsPage implements OnInit, OnDestroy {
       input.value = '';
     }
   }  
-    async playTrack(track: Track) {
+
+  async playTrack(track: Track) {
     try {
-      // Create a queue with just this track and play it
       await this.audioService.setQueue([track], 0);
-      // Navigate to the player page
       await this.router.navigate(['tabs/player']);
     } catch (error) {
       console.error('Error playing track:', error);
@@ -249,10 +204,8 @@ export class UploadsPage implements OnInit, OnDestroy {
   async togglePlayTrack(track: Track): Promise<void> {
     try {
       if (this.currentPlaybackState && this.currentPlaybackState.currentTrack?.id === track.id) {
-        // The track is already the current track, toggle play/pause
         await this.audioService.togglePlay();
       } else {
-        // It's a different track, start playing it
         await this.playTrack(track);
       }
     } catch (error) {
@@ -304,8 +257,7 @@ export class UploadsPage implements OnInit, OnDestroy {
         });
       });
     }
-    
-    // Add cancel button
+
     buttons.push({
       text: 'Cancel',
       role: 'cancel',
@@ -370,18 +322,47 @@ export class UploadsPage implements OnInit, OnDestroy {
     });
     
     await alert.present();
-    return false; // Default return value
+    return false;
   }
   
+  async deleteTrack(track: Track) {
+    const alert = await this.alertCtrl.create({
+      header: 'Delete Track',
+      message: `Are you sure you want to delete "${track.title}"?`,
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: async () => {
+            try {
+              await this.dataService.removeTrack(track.id);
+              this.showToast('Track deleted');
+              await this.refreshLocalMusic();
+              return true;
+            } catch (error) {
+              console.error('Error deleting track:', error);
+              this.showToast('Failed to delete track', 'danger');
+              return false;
+            }
+          }
+        }
+      ]
+    });
+    
+    await alert.present();
+  }
+
   async createArtistMix(track: Track) {
     try {
       const artistName = track.artist || 'My';
       const mixName = `${artistName}'s Mix`;
       
-      // Create the playlist
       const playlist = await this.dataService.createPlaylist(mixName);
       
-      // Add the track to the playlist
       await this.dataService.addTrackToPlaylist(playlist.id, track.id);
       
       this.showToast(`Created artist mix: ${mixName}`);
@@ -403,45 +384,5 @@ export class UploadsPage implements OnInit, OnDestroy {
     });
     
     await toast.present();
-  }
-
-  async presentActionSheet() {
-    const buttons = [
-      {
-        text: 'Search Music',
-        icon: 'search',
-        handler: () => {
-          this.router.navigateByUrl('/tabs/search');
-          return true;
-        }
-      },
-      {
-        text: 'Your Library',
-        icon: 'library',
-        handler: () => {
-          this.router.navigateByUrl('/tabs/library');
-          return true;
-        }
-      },
-      {
-        text: 'Home',
-        icon: 'home',
-        handler: () => {
-          this.router.navigateByUrl('/tabs/home');
-          return true;
-        }
-      },
-      {
-        text: 'Cancel',
-        icon: 'close',
-        role: 'cancel'
-      }
-    ];
-    
-    const actionSheet = await this.actionSheetCtrl.create({
-      header: 'Options',
-      buttons
-    });
-    await actionSheet.present();  
   }
 }

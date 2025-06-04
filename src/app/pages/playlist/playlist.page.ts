@@ -95,7 +95,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
 
   shufflePlay() {
     if (this.playlistTracks.length > 0) {
-      // Create a shuffled copy of the tracks
       const shuffled = [...this.playlistTracks].sort(() => Math.random() - 0.5);
       this.mediaPlayerService.setQueue(shuffled, 0);
     }
@@ -141,11 +140,9 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
     // Complete the reorder
     event.detail.complete();
     
-    // Update the playlist trackIds to match the new order
     if (this.playlist) {
       try {
         this.playlist.trackIds = this.playlistTracks.map(track => track.id);
-        this.playlist.updatedAt = new Date().toISOString();
         
         await this.dataService.savePlaylists([this.playlist]);
       } catch (error) {

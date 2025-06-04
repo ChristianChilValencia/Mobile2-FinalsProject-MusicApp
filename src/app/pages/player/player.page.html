@@ -11,14 +11,14 @@
 
 <ion-content [fullscreen]="true" scrollY="true">
   <div class="player-container" *ngIf="playbackState">
-    <!-- Cover Art Section -->
     <div class="cover-art-container">
       <div class="cover-art" [class.rotate]="playbackState.isPlaying">
         <img [src]="playbackState.currentTrack?.artwork || 'assets/placeholder-player.png'" alt="Album Art">
       </div>
     </div>
-      <!-- Track Info Section -->
-    <div class="track-info-container">      <div class="track-info">
+
+    <div class="track-info-container">      
+      <div class="track-info">
         <h1 class="title">{{ playbackState.currentTrack?.title || 'No Track Playing' }}</h1>
         <div class="track-details">
           <div class="track-metadata">
@@ -31,7 +31,7 @@
         </div>
       </div>
     </div>
-      <!-- Seek Bar Section -->
+    
     <div class="seek-controls">
       <div class="time-display">
         <div class="current-time">{{ formatTime(playbackState.currentTime) }}</div>
@@ -45,18 +45,16 @@
         [disabled]="!playbackState.currentTrack">
       </ion-range>
     </div>
-      <!-- Playback Controls -->
+
     <div class="playback-controls">
       <ion-button fill="clear" class="control-button" (click)="skipBackward()">
         <ion-icon slot="icon-only" name="play-back"></ion-icon>
-        <span class="skip-label">-5s</span>
       </ion-button>
-        <ion-button fill="clear" class="control-button play-button" (click)="togglePlay()">
+      <ion-button fill="clear" class="control-button play-button" (click)="togglePlay()">
         <ion-icon slot="icon-only" [name]="playbackState.isPlaying ? 'pause' : 'play'"></ion-icon>
       </ion-button>
         <ion-button fill="clear" class="control-button" (click)="skipForward()">
         <ion-icon slot="icon-only" name="play-forward"></ion-icon>
-        <span class="skip-label">+5s</span>
       </ion-button>
     </div>
   </div>

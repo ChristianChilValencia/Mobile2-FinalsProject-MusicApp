@@ -12,14 +12,16 @@
       refreshingText="Refreshing...">
     </ion-refresher-content>
   </ion-refresher>
+
   <input type="file" #fileInput style="display:none" 
          accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.opus" 
          multiple (change)="onFileSelected($event)">
+
   <div class="uploads-container">
-    <!-- Upload Section -->
     <div class="upload-header">
       <h2>Add Local Audio Files</h2>
-      <p>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</p>    <ion-button expand="block" fill="clear" (click)="requestAudioPermissions(); openFileSelector()" class="upload-area">
+      <p>Support formats: MP3, AAC, WAV, OGG, FLAC, OPUS, M4A</p>    
+      <ion-button expand="block" fill="clear" (click)="requestAudioPermissions(); openFileSelector()" class="upload-area">
         <ion-icon slot="start" name="cloud-upload"></ion-icon>
         Tap to select files    
       </ion-button>

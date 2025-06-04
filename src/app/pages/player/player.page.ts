@@ -39,38 +39,20 @@ export class PlayerPage implements OnInit, OnDestroy {
     }
   }
 
-  play() {
-    this.mediaPlayerService.play();
-  }
-
-  pause() {
-    this.mediaPlayerService.pause();
-  }
-
   togglePlay() {
     this.mediaPlayerService.togglePlay();
   }
-
-  nextTrack() {
-    this.mediaPlayerService.next();
-  }
-  previousTrack() {
-    this.mediaPlayerService.previous();
-  }  onSeekChange(event: any) {
+  
+  onSeekChange(event: any) {
     if (!this.playbackState?.currentTrack) return;
     
     const newPosition = event.detail.value;
     const duration = this.playbackState.duration || 0;
     
-    // Ensure the position is within the track duration
     const limitedPosition = Math.min(newPosition, duration);
     this.mediaPlayerService.seek(limitedPosition);
   }
 
-  onVolumeChange(event: any) {
-    const newVolume = event.detail.value;
-    this.mediaPlayerService.setVolume(newVolume);
-  }
   formatTime(seconds: number): string {
     if (!seconds || isNaN(seconds)) return '0:00';
     
@@ -78,68 +60,11 @@ export class PlayerPage implements OnInit, OnDestroy {
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   }
-  toggleShuffle() {
-    this.isShuffleOn = !this.isShuffleOn;
-    this.mediaPlayerService.setShuffle(this.isShuffleOn);
-    
-    if (this.isShuffleOn) {
-      this.showToast('Shuffle on');
-    } else {
-      this.showToast('Shuffle off');
-    }
-  }
   
-  async presentOptions() {
-    if (!this.playbackState || !this.playbackState.currentTrack) return;
-    
-    const track = this.playbackState.currentTrack;
-    
-    const buttons = [
-      {
-        text: 'Add to Playlist',
-        handler: () => {
-          this.addToPlaylist(track);
-          return true;
-        }
-      },
-      {
-        text: 'View Artist',
-        handler: () => {
-          // TODO: Implement artist view
-          this.showToast('Artist view not implemented yet');
-          return true;
-        }
-      },      {
-        text: 'View Album',
-        handler: () => {
-          // TODO: Implement album view
-          this.showToast('Album view not implemented yet');
-          return true;
-        }
-      },
-      {
-        text: 'Cancel',
-        handler: () => {
-          return true;
-        }
-      }
-    ];
-    
-    const actionSheet = await this.actionSheetController.create({
-      header: 'Options',
-      buttons
-    });
-    
-    await actionSheet.present();
-  }  /**
-   * Add a specified track to playlist
-   */  async addToPlaylist(track: Track) {
+  async addToPlaylist(track: Track) {
     const playlists = await this.dataService.getAllPlaylists();
-    
-    // Always show the action sheet, even if there are no playlists
     const buttons = [];
-    
-    // Add create playlist and artist mix options at the top
+
     buttons.push({
       text: 'Create Playlist',
       handler: () => {
@@ -156,7 +81,6 @@ export class PlayerPage implements OnInit, OnDestroy {
         const artistName = track.artist || 'My';
         const mixName = `${artistName}'s Mix`;
         
-        // First ensure the track is saved properly
         const filePath = track.pathOrUrl || track.previewUrl;
         this.dataService.saveLocalMusic(track, filePath)
           .then(() => {
@@ -176,13 +100,11 @@ export class PlayerPage implements OnInit, OnDestroy {
       }
     });
     
-    // Add existing playlists
     if (playlists.length > 0) {
       playlists.forEach(playlist => {
         buttons.push({
           text: playlist.name,
           handler: () => {
-            // First ensure the track is saved properly
             const filePath = track.pathOrUrl || track.previewUrl;
             this.dataService.saveLocalMusic(track, filePath)
               .then(() => this.dataService.addTrackToPlaylist(playlist.id, track.id))
@@ -194,7 +116,6 @@ export class PlayerPage implements OnInit, OnDestroy {
       });
     }
     
-    // Add cancel button
     buttons.push({
       text: 'Cancel',
       handler: () => {
@@ -208,9 +129,8 @@ export class PlayerPage implements OnInit, OnDestroy {
     });
     
     await actionSheet.present();
-  }  /**
-   * Skip forward 5 seconds
-   */
+  }
+  
   skipForward() {
     if (this.playbackState && this.playbackState.currentTrack) {
       const newPosition = Math.min(
@@ -221,9 +141,6 @@ export class PlayerPage implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Skip backward 5 seconds
-   */
   skipBackward() {
     if (this.playbackState && this.playbackState.currentTrack) {
       const newPosition = Math.max(this.playbackState.currentTime - 5, 0);
@@ -231,7 +148,6 @@ export class PlayerPage implements OnInit, OnDestroy {
     }
   }
 
-  // Add missing methods
   next() {
     this.mediaPlayerService.next();
   }
@@ -239,28 +155,11 @@ export class PlayerPage implements OnInit, OnDestroy {
   previous() {
     this.mediaPlayerService.previous();
   }
+
   closePlayer() {
-    // Navigate back
     this.navCtrl.back();
   }
-  
-  showOptions() {
-    this.presentOptions();
-  }
-  
-  onSeekEnd() {
-    // Handle seek end event
-    console.log('Seek end not implemented');
-  }
-  
-  playTrackAtIndex(index: number) {
-    // Play track at specific index in the queue
-    if (index >= 0 && this.playbackState && this.playbackState.queue.length > index) {
-      this.mediaPlayerService.setQueue(this.playbackState.queue, index);
-    }
-  }  /**
-   * Add current track to playlist - called from the UI
-   */
+
   addCurrentTrackToPlaylist() {
     if (this.playbackState && this.playbackState.currentTrack) {
       this.addToPlaylist(this.playbackState.currentTrack);
@@ -268,6 +167,7 @@ export class PlayerPage implements OnInit, OnDestroy {
       this.showToast('No track is currently playing', 'warning');
     }
   }
+  
   private async showToast(message: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message,

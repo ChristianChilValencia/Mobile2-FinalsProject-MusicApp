@@ -292,21 +292,8 @@ export class MediaPlayerService {
 
   async addLocalTrack(file: File): Promise<Track> {
     try {
-      const validTypes = [
-        'audio/mpeg', 
-        'audio/mp3',
-        'audio/wav',
-        'audio/x-wav',
-        'audio/ogg',
-        'audio/vorbis',
-        'audio/aac',
-        'audio/x-m4a',
-        'audio/mp4',
-        'audio/m4a',
-        'audio/flac',
-        'audio/x-flac',
-        'audio/opus'
-      ];
+      const validTypes = ['audio/mpeg','audio/mp3','audio/wav','audio/x-wav','audio/ogg','audio/vorbis',
+        'audio/aac','audio/x-m4a','audio/mp4','audio/m4a','audio/flac','audio/x-flac','audio/opus'];
       const isValidType = validTypes.some(type => file.type.toLowerCase() === type.toLowerCase());
       if (!isValidType) {
         console.warn(`Attempting to handle file type: ${file.type}`);

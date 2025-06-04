@@ -13,7 +13,7 @@ VibeFlow is a modern, feature-rich music streaming and playback application buil
 - 💫 Modern, sleek, responsive UI 
 
 ### Advanced Features
-- 🔍 Advanced search functionality for streaming content
+- 🔍 Search functionality for streaming content
 - 📱 Full Android support with native capabilities
 - 🎯 Trending music and genre-based exploration
 - 💾 Local file management and organization
@@ -21,11 +21,11 @@ VibeFlow is a modern, feature-rich music streaming and playback application buil
 ## 🏗️ Project Structure
 
 ### Pages
-- **Home**: Recently played tracks, trending music, and explore sections
+- **Home**: Trending music and explore sections
 - **Search**: Powerful search interface for Deezer streaming content
 - **Library**: Browse and manage local music and playlists
-- **Uploads**: Upload and organize local audio files with all music list
-- **Playlist Stream**: Detailed playlist view with track management
+- **Uploads (Music)**: Upload and organize local audio files with all music list
+- **Playlist (Library)**: Detailed playlist view with track management
 - **Player**: Full-screen player with advanced playback controls
 
 ### Core Services
@@ -41,23 +41,8 @@ VibeFlow is a modern, feature-rich music streaming and playback application buil
   
 - **DeezerService**: Streaming API integration
   - Music search functionality
-  - Trending tracks retrieval
+  - Trending & Explore tracks retrieval
   - Genre-based recommendations
-  
-- **StorageService**: File system operations
-  - Local file management
-  - File format handling
-  - Storage optimization
-  
-- **ConfigService**: Application configuration
-  - Theme management
-  - Playback settings
-  - Quality preferences
-  
-- **MediaScannerService**: Local media management
-  - Audio file scanning
-  - Metadata extraction
-  - Format validation
 
 ## 🔧 Technical Details
 
@@ -71,12 +56,10 @@ VibeFlow is a modern, feature-rich music streaming and playback application buil
 ### Native Features
 - **Capacitor Filesystem API**: Local storage management
 - **Capacitor Native Audio**: Enhanced audio playback
-- **Media Session API**: OS-level media controls
 - **SQLite Storage**: Persistent data management
 
 ### API Integration
 - **Deezer API via RapidAPI**: Music streaming service
   - Track search
-  - Music previews
-  - Artist and album information
+  - 30s Music previews
   - Genre-based recommendations

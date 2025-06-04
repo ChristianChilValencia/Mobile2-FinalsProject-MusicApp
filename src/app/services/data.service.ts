@@ -3,11 +3,7 @@ import { Platform, ToastController, ActionSheetController, AlertController } fro
 import { v4 as uuidv4 } from 'uuid';
 import { BehaviorSubject } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
-import {
-  CapacitorSQLite,
-  SQLiteConnection,
-  SQLiteDBConnection
-} from '@capacitor-community/sqlite';
+import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 export interface Track {
   id: string;
@@ -81,19 +77,20 @@ export class DataService {
     this.sqlite = new SQLiteConnection(CapacitorSQLite);
     this.loadTracks();
     this.loadPlaylists();
-}
+  }
 
   async ensureInit(): Promise<void> {
-    if (this._initPromise) return this._initPromise;        this._initPromise = (async () => {
+    if (this._initPromise) return this._initPromise;        
+    this._initPromise = (async () => {
       try {
         await this.platform.ready();
         
         if (this.platform.is('hybrid')) {
           await this.sqlite.checkConnectionsConsistency();
-          this.db = await this.sqlite.createConnection('harmony.db', false, 'no-encryption', 1, false);
+          this.db = await this.sqlite.createConnection('vibeflow.db', false, 'no-encryption', 1, false);
         } else {
           await this.sqlite.initWebStore();
-          this.db = await this.sqlite.createConnection('harmony.db', false, 'no-encryption', 1, false);
+          this.db = await this.sqlite.createConnection('vibeflow.db', false, 'no-encryption', 1, false);
         }
         await this.db.open();
 
@@ -143,7 +140,6 @@ export class DataService {
 
         await this.db.execute(sql);
         
-        // Load local tracks from SQLite
         if (this.platform.is('hybrid')) {
           const result = await this.db.query(`
             SELECT
@@ -175,8 +171,7 @@ export class DataService {
               source: row.source as 'local' | 'stream',
               localPath: row.localPath
             }));
-            
-            // Merge local tracks with existing tracks
+
             const currentTracks = this.tracksSubject.value;
             const mergedTracks = [...currentTracks.filter(t => !t.isLocal), ...localTracks];
             this.tracksSubject.next(mergedTracks);
@@ -191,7 +186,6 @@ export class DataService {
     return this._initPromise;
   }
 
-  // Track methods
   async saveLocalMusic(track: Track, filePath: string): Promise<void> {
     try {
       const tracks = this.tracksSubject.value;      
@@ -202,7 +196,6 @@ export class DataService {
         localPath: filePath
       };
 
-      // If track already exists, update it, otherwise add new
       const existingIndex = tracks.findIndex(t => t.id === track.id);
       if (existingIndex >= 0) {
         tracks[existingIndex] = localTrack;
@@ -210,16 +203,11 @@ export class DataService {
         tracks.push(localTrack);
       }
       
-      // Update in-memory state
       this.tracksSubject.next(tracks);
-      
-      // Save to Preferences for web/desktop
       await this.saveTracks(tracks);
       
-      // Save to SQLite
       if (this.platform.is('hybrid')) {
         await this.ensureInit();
-          // Save track data
         await this.db.run(
           `INSERT OR REPLACE INTO tracks (
             id, title, artist, album, duration,
@@ -241,7 +229,6 @@ export class DataService {
           ]
         );
         
-        // Save file path
         await this.db.run(
           `INSERT OR REPLACE INTO downloaded_music (
             track_id, file_uri, file_path, downloaded_at
@@ -260,7 +247,6 @@ export class DataService {
     }
   } 
 
-  // Additional methods for track and playlist operations
   async getAllTracks(): Promise<Track[]> {
     return this.tracksSubject.value;
   }
@@ -276,38 +262,6 @@ export class DataService {
       this.tracksSubject.next(tracks);
     } catch (error) {
       console.error('Error loading tracks:', error);
-    }
-  }  // Add a method to reset the database in case of corruption
-  async resetDatabase(): Promise<void> {
-    try {
-      if (!this.platform.is('hybrid')) {
-        console.log('Reset database only applies to mobile platforms');
-        return;
-      }
-      
-      console.log('Attempting to reset database...');
-      
-      // Close any existing connection
-      if (this.db) {
-        try {
-          await this.db.close();
-          console.log('Database connection closed');
-        } catch (err) {
-          console.error('Error closing db connection:', err);
-        }
-      }
-
-      this._initPromise = null;
-      await this.ensureInit();
-      
-      console.log('Database reset completed');
-      
-      // Reload data
-      await this.loadTracks();
-      await this.loadPlaylists();
-    } catch (error) {
-      console.error('Error resetting database:', error);
-      throw error;
     }
   }
 
@@ -354,7 +308,6 @@ export class DataService {
       throw new Error(`Playlist with ID ${playlistId} not found`);
     }
     
-    // Add track if not already in playlist
     if (!playlist.trackIds.includes(trackId)) {
       playlist.trackIds.push(trackId);
       this.playlistsSubject.next([...playlists]);
@@ -438,12 +391,9 @@ export class DataService {
 
   async removeTrack(trackId: string): Promise<void> {
     try {
-      // Remove from tracks list
       const tracks = this.tracksSubject.value.filter(t => t.id !== trackId);
       this.tracksSubject.next(tracks);
       await this.saveTracks(tracks);
-      
-      // Remove from any playlists
       const playlists = this.playlistsSubject.value;
       let playlistsChanged = false;
       
@@ -467,7 +417,6 @@ export class DataService {
     }
   }
 
-  // Storage methods for key-value pairs
   async get(key: string): Promise<any> {
     try {
       const { value } = await Preferences.get({ key });
@@ -489,37 +438,21 @@ export class DataService {
       throw error;
     }
   }
-
-  // UI Helper Methods to reduce duplication across components
-
-  /**
-   * Shows a toast notification
-   * @param message Message to display
-   * @param color Toast color (success, warning, danger)
-   * @returns Promise that resolves when the toast is presented
-   */
+  
   async showToast(message: string, color: string = 'success'): Promise<void> {
     const toast = await this.toastController.create({
       message,
       duration: 2000,
       position: 'top',
       color
-    });
-    
+    });  
     await toast.present();
   }
 
-  /**
-   * Show an action sheet for adding a track to playlists
-   * @param track The track to add to a playlist
-   * @returns Promise that resolves when the sheet is presented
-   */
   async showAddToPlaylistOptions(track: Track): Promise<void> {
-    // Get all playlists
     const playlists = await this.getAllPlaylists();
     const buttons: any[] = [];
 
-    // Create artist mix option
     buttons.push({
       text: `Create ${track.artist}'s Mix`,
       handler: () => {
@@ -528,7 +461,6 @@ export class DataService {
       }
     });
     
-    // Create custom playlist option
     buttons.push({
       text: 'Create Playlist',
       handler: () => {
@@ -537,7 +469,6 @@ export class DataService {
       }
     });
 
-    // Add existing playlists
     if (playlists.length > 0) {
       playlists.forEach(playlist => {
         buttons.push({
@@ -549,56 +480,36 @@ export class DataService {
         });
       });
     }
-
-    // Add cancel button
+    
     buttons.push({
       text: 'Cancel',
       role: 'cancel'
     });
-
     const actionSheet = await this.actionSheetController.create({
       header: 'Add to Playlist',
       buttons
     });
-
     await actionSheet.present();
   }
 
-  /**
-   * Create an artist mix with a track and show notifications
-   * @param track The track to use for the mix
-   */
   async createArtistMixWithTrack(track: Track): Promise<void> {
-    const newPlaylistName = `${track.artist}'s Mix`;
-    
+    const newPlaylistName = `${track.artist}'s Mix`;    
     try {
-      // Create the playlist
       const playlist = await this.createPlaylist(newPlaylistName);
-      
-      // Save the track and add it to the playlist
       const filePath = track.pathOrUrl || track.previewUrl;
       await this.saveLocalMusic(track, filePath);
       await this.addTrackToPlaylist(playlist.id, track.id);
-      
       await this.showToast(`Created artist mix: ${newPlaylistName}`);
     } catch (error) {
       console.error('Error creating artist mix:', error);
       await this.showToast('Failed to create artist mix', 'danger');
     }
   }
-
-  /**
-   * Add a track to a playlist and show notification
-   * @param track The track to add
-   * @param playlistId The playlist ID
-   */
+  
   async addTrackToPlaylistAndNotify(track: Track, playlistId: string): Promise<void> {
     try {
-      // First, make sure the track is saved in our data service
       const filePath = track.pathOrUrl || track.previewUrl;
       await this.saveLocalMusic(track, filePath);
-      
-      // Then add it to the playlist
       await this.addTrackToPlaylist(playlistId, track.id);
       
       const playlist = await this.getPlaylist(playlistId);
@@ -609,12 +520,7 @@ export class DataService {
     }
   }
 
-  /**
-   * Create a custom playlist with a track
-   * @param track The track to add to the new playlist
-   */
   async createCustomPlaylistWithTrack(track: Track): Promise<void> {
-    // Show an alert for custom playlist name
     const alert = await this.alertController.create({
       header: 'New Playlist',
       inputs: [
@@ -641,16 +547,11 @@ export class DataService {
               await this.showToast('Please enter a playlist name', 'warning');
               return false;
             }
-            
             try {
-              // Create the playlist with custom name
               const playlist = await this.createPlaylist(data.name, data.description);
-              
-              // Save the track and add it to the playlist
               const filePath = track.pathOrUrl || track.previewUrl;
               await this.saveLocalMusic(track, filePath);
-              await this.addTrackToPlaylist(playlist.id, track.id);
-              
+              await this.addTrackToPlaylist(playlist.id, track.id);              
               await this.showToast(`Created playlist: ${data.name}`);
               return true;
             } catch (error) {

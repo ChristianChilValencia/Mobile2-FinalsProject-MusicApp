@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActionSheetController, AlertController, NavController, ToastController } from '@ionic/angular';
 import { DataService, Track, Playlist } from '../../services/data.service';
-import { MediaPlayerService, PlaybackState } from '../../services/media-player.service';
+import { MediaPlayerService } from '../../services/media-player.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -10,45 +10,16 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./library.page.scss'],
   standalone: false
 })
-export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key: string]: string } = {};
-  tracks: Track[] = [];
+export class LibraryPage{  
+  playlistArtwork: { [key: string]: string } = {};
   playlists: Playlist[] = [];
-  filteredTracks: Track[] = [];
-  selectedSegment: string = 'playlists';
   isLoading: boolean = true;
-  currentPlaybackState: PlaybackState | null = null;
-  private playbackSubscription: Subscription | null = null;
 
   constructor(
     private dataService: DataService,
-    private mediaPlayerService: MediaPlayerService,
     private navController: NavController,
-    private actionSheetController: ActionSheetController,
     private alertController: AlertController,
-    private toastController: ToastController
   ) {}
-  ngOnInit() {
-    this.loadData();
-    
-    this.dataService.tracks$.subscribe(tracks => {
-      this.tracks = tracks;
-    });
-    
-    this.dataService.playlists$.subscribe(playlists => {
-      this.playlists = playlists;
-    });
-
-    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
-      this.currentPlaybackState = state;
-    });
-  }
-
-  ngOnDestroy() {
-    if (this.playbackSubscription) {
-      this.playbackSubscription.unsubscribe();
-      this.playbackSubscription = null;
-    }
-  }  
   
   ionViewWillEnter() {
     console.log('Library page - entering view');
@@ -129,79 +100,7 @@ export class LibraryPage implements OnInit, OnDestroy {  playlistArtwork: { [key
     this.navController.navigateForward(`/tabs/playlist/${playlist.id}`);
   }
 
-  navigateToUploads() {
-    this.navController.navigateForward('/tabs/uploads');
-  }
-
-  navigateToSearch() {
-    this.navController.navigateForward('/tabs/search');
-  }
-
-  async presentActionSheet() {
-    const buttons = [
-      {
-        text: 'Create Playlist',
-        handler: () => {
-          this.createPlaylist();
-          return true;
-        }
-      },      {
-        text: 'Upload Music',
-        handler: () => {
-          this.navigateToUploads();
-          return true;
-        }
-      }
-    ];
-    
-    buttons.push({
-      text: 'Cancel',
-      handler: () => {
-        return true;
-      }
-    });
-    
-    const actionSheet = await this.actionSheetController.create({
-      header: 'Library Options',
-      buttons
-    });
-    
-    await actionSheet.present();
-  }
-
-  async deletePlaylist(playlist: Playlist, event: Event) {
-    // Stop event propagation to prevent opening the playlist
-    event.stopPropagation();
-    
-    const alert = await this.alertController.create({
-      header: 'Confirm Delete',
-      message: `Are you sure you want to delete the playlist "${playlist.name}"?`,
-      buttons: [
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: 'Delete',
-          role: 'destructive',
-          handler: async () => {
-            try {
-              await this.dataService.deletePlaylist(playlist.id);
-              this.showToast('Playlist deleted');
-              return true;
-            } catch (error) {
-              console.error('Error deleting playlist:', error);
-              this.showToast('Failed to delete playlist', 'danger');
-              return false;
-            }
-          }
-        }
-      ]
-    });
-    
-    await alert.present();
-  }  
-    private async showToast(message: string, color: string = 'success') {
+  private async showToast(message: string, color: string = 'success') {
     await this.dataService.showToast(message, color);
   }
 

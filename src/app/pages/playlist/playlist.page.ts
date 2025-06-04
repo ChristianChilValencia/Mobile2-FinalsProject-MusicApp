@@ -1,9 +1,8 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { ActionSheetController, AlertController, NavController, ToastController } from '@ionic/angular';
+import { ActionSheetController, AlertController, NavController } from '@ionic/angular';
 import { DataService, Track, Playlist } from '../../services/data.service';
-import { MediaPlayerService, PlaybackState } from '../../services/media-player.service';
-import { Subscription } from 'rxjs';
+import { MediaPlayerService } from '../../services/media-player.service';
 
 @Component({
   selector: 'app-playlist-stream',
@@ -11,12 +10,11 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./playlist.page.scss'],
   standalone: false
 })
-export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | null = null;
+export class PlaylistPage implements OnInit {  
+  playlist: Playlist | null = null;
   playlistTracks: Track[] = [];
   isReordering = false;
   playlistId: string | null = null;
-  currentPlaybackState: PlaybackState | null = null;
-  private playbackSubscription: Subscription | null = null;
 
   @ViewChild('coverArtInput', { static: false }) coverArtInput!: ElementRef;
 
@@ -27,34 +25,23 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
     private navController: NavController,
     private actionSheetController: ActionSheetController,
     private alertController: AlertController,
-    private toastController: ToastController
   ) { }
 
   async ngOnInit() {
     this.playlistId = this.route.snapshot.paramMap.get('id');
-    
     if (this.playlistId) {
       await this.loadPlaylist(this.playlistId);
     } else {
       this.navController.navigateBack('/tabs/library');
-    }    // Subscribe to playback state changes
-    this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
-      this.currentPlaybackState = state;
-    });
-  }
-  ngOnDestroy() {
-    // Unsubscribe from playback state changes
-    if (this.playbackSubscription) {
-      this.playbackSubscription.unsubscribe();
     }
   }
 
   async ionViewWillEnter() {
-    // Reload playlist on each page entry to ensure it's up to date
     if (this.playlistId) {
       await this.loadPlaylist(this.playlistId);
     }
   }
+
   async loadPlaylist(playlistId: string) {
     try {
       this.playlist = await this.dataService.getPlaylist(playlistId);
@@ -65,7 +52,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       
       this.playlistTracks = [];
       
-      // Load all tracks in the playlist
       for (const trackId of this.playlist.trackIds) {
         const track = await this.dataService.getTrack(trackId);
         if (track) {
@@ -77,9 +63,10 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       this.dataService.showToast('Failed to load playlist', 'danger');
       this.navController.navigateBack('/tabs/library');
     }
-  }async playTrack(track: Track, index: number) {
+  }
+  
+  async playTrack(track: Track, index: number) {
     try {
-      // Start playback from the selected track
       this.mediaPlayerService.setQueue(this.playlistTracks, index);
     } catch (error) {
       console.error('Error playing track:', error);
@@ -98,6 +85,7 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       this.mediaPlayerService.setQueue(shuffled, 0);
     }
   }
+
   async removeTrack(track: Track) {
     if (!this.playlist) return;
     
@@ -114,7 +102,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
           handler: async () => {
             try {
               await this.dataService.removeTrackFromPlaylist(this.playlist!.id, track.id);
-              // Reload the playlist
               await this.loadPlaylist(this.playlist!.id);
             } catch (error) {
               console.error('Error removing track:', error);
@@ -127,14 +114,11 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
     
     await alert.present();
   }
+
   async handleReorder(event: any) {
-    // Get the item that was moved
     const itemMove = this.playlistTracks.splice(event.detail.from, 1)[0];
-    
-    // Insert it at the destination
     this.playlistTracks.splice(event.detail.to, 0, itemMove);
     
-    // Complete the reorder
     event.detail.complete();
     
     if (this.playlist) {
@@ -148,6 +132,7 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       }
     }
   }
+
   async presentActionSheet() {
     if (!this.playlist) return;
       const buttons = [
@@ -190,10 +175,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
     await actionSheet.present();
   }
 
-  async presentPlaylistOptions() {
-    // Use the existing presentActionSheet method
-    await this.presentActionSheet();
-  }
   async editPlaylistDetails() {
     if (!this.playlist) return;
     
@@ -233,7 +214,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
                 data.description.trim()
               );
               
-              // Reload the playlist
               await this.loadPlaylist(this.playlist!.id);
               return true;
             } catch (error) {
@@ -245,7 +225,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
         }
       ]
     });
-    
     await alert.present();
   }
 
@@ -275,7 +254,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
         }
       ]
     });
-    
     await alert.present();
   }
 
@@ -304,49 +282,31 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       return `${minutes} min`;
     }
   }
-  // Check if a track is currently playing
+  
   isCurrentlyPlaying(track: Track): boolean {
     return this.mediaPlayerService.isCurrentlyPlaying(track);
   }
-    // Toggle play/pause for a track
+  
   togglePlayTrack(track: Track): void {
     if (!this.playlistTracks.length) return;
-    
-    // Get the index of the track in the playlist
-    const index = this.playlistTracks.findIndex(t => t.id === track.id);
+      const index = this.playlistTracks.findIndex(t => t.id === track.id);
     if (index !== -1) {
       if (this.mediaPlayerService.isCurrentlyPlaying(track)) {
-        // The track is already playing, just toggle play/pause
         this.mediaPlayerService.togglePlay();
       } else {
-        // Start playing from this track in the playlist
         this.playTrack(track, index);
       }
     }
   }
-  // Show options to add track to another playlist
+  
   async showAddToPlaylistOptions(track: Track) {
     await this.dataService.showAddToPlaylistOptions(track);
   }
-  // Create a custom playlist with a track
-  async createCustomPlaylist(track: Track) {
-    await this.dataService.createCustomPlaylistWithTrack(track);
-  }
-  // Create an artist mix playlist
-  async createArtistMix(track: Track) {
-    await this.dataService.createArtistMixWithTrack(track);
-  }
-  // Add track to an existing playlist
-  async addTrackToPlaylist(track: Track, playlistId: string) {
-    await this.dataService.addTrackToPlaylistAndNotify(track, playlistId);
-  }
 
-  // Trigger the hidden file input when clicking on cover art
   triggerCoverArtUpload(): void {
     this.coverArtInput.nativeElement.click();
   }
 
-  // Handle cover art file selection
   async onCoverArtSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
@@ -357,20 +317,17 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       return;
     }
 
-    // File size validation - let's limit to 5MB
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       this.showToast('Image is too large. Please select an image under 5MB', 'warning');
       return;
     }
 
-    // Read file as data URL
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
         if (!e.target?.result) return;
         
-        // Save cover art and update playlist
         if (this.playlist) {
           const coverArtDataUrl = e.target.result as string;
           await this.dataService.updatePlaylistDetails(
@@ -380,7 +337,6 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
             coverArtDataUrl
           );
           
-          // Reload the playlist to show new cover art
           await this.loadPlaylist(this.playlist.id);
           this.showToast('Playlist cover art updated');
         }
@@ -390,10 +346,10 @@ export class PlaylistPage implements OnInit, OnDestroy {  playlist: Playlist | n
       console.error('Error uploading cover art:', error);
       this.showToast('Failed to update cover art', 'danger');
     } finally {
-      // Clear the input
       input.value = '';
     }
   }
+  
   private async showToast(message: string, color: string = 'success') {
     await this.dataService.showToast(message, color);
   }

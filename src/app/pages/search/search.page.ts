@@ -1,5 +1,4 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ActionSheetController, ToastController, NavController, AlertController } from '@ionic/angular';
 import { DeezerService } from '../../services/deezer.service';
 import { MediaPlayerService, PlaybackState } from '../../services/media-player.service';
 import { DataService } from '../../services/data.service';
@@ -24,12 +23,9 @@ export class SearchPage implements OnInit, OnDestroy {
   constructor(
     private deezerService: DeezerService,
     private mediaPlayerService: MediaPlayerService,
-    private dataService: DataService,
-    private actionSheetController: ActionSheetController,
-    private toastController: ToastController,
-    private alertController: AlertController,
-    private navCtrl: NavController
+    private dataService: DataService
   ) {}
+  
   ngOnInit() {
     this.loadPlaylists();
       this.playbackSubscription = this.mediaPlayerService.getPlaybackState().subscribe(state => {
@@ -87,7 +83,9 @@ export class SearchPage implements OnInit, OnDestroy {
     this.searchQuery = '';
     this.searchResults = [];
     this.errorMessage = '';
-  }  async playTrack(track: Track) {
+  }  
+  
+  async playTrack(track: Track) {
     try {
       const trackToSave = {
         ...track,
@@ -95,15 +93,14 @@ export class SearchPage implements OnInit, OnDestroy {
         addedAt: track.addedAt || new Date().toISOString()
       };
 
-      // Check if track already exists in collection
       const allTracks = await this.dataService.getAllTracks();
       const existingTrack = allTracks.find(t => t.id === trackToSave.id);
       
-      // Save track to collection BEFORE playing
       if (!existingTrack) {
         console.log('Saving new track to collection');
         await this.dataService.saveTracks([...allTracks, trackToSave]);
-      } else {
+      } 
+      else {
         console.log('Updating existing track in collection');
         const updatedTracks = allTracks.map(t => 
           t.id === trackToSave.id ? trackToSave : t
@@ -111,81 +108,23 @@ export class SearchPage implements OnInit, OnDestroy {
         await this.dataService.saveTracks(updatedTracks);
       }
       
-      // Play the track using the play method (not setQueue)
       await this.mediaPlayerService.play(trackToSave);
-      
-      // Show a toast to confirm the track is playing
       this.dataService.showToast(`Playing "${trackToSave.title}"`);
     } catch (error) {
       console.error('Error playing track:', error);
       this.dataService.showToast('Error playing track', 'danger');
     }
   }
+  
   async showAddToPlaylistOptions(track: Track) {
     await this.dataService.showAddToPlaylistOptions(track);
   }
-  async addTrackToPlaylist(track: Track, playlistId: string) {
-    await this.dataService.addTrackToPlaylistAndNotify(track, playlistId);
-  }  async createArtistMixWithTrack(track: Track) {
-    await this.dataService.createArtistMixWithTrack(track);
-  }
-  async createCustomPlaylistWithTrack(track: Track) {
-    await this.dataService.createCustomPlaylistWithTrack(track);
-  }
-
-  async presentActionSheet() {
-    const buttons = [
-      {
-        text: 'Upload Music',
-        icon: 'cloud-upload',
-        handler: () => {
-          this.navigateToPage('/tabs/uploads');
-          return true;
-        }
-      },
-      {
-        text: 'Your Library',
-        icon: 'library',
-        handler: () => {
-          this.navigateToPage('/tabs/library');
-          return true;
-        }
-      },
-      {
-        text: 'Home',
-        icon: 'home',
-        handler: () => {
-          this.navigateToPage('/tabs/home');
-          return true;
-        }
-      },
-      {
-        text: 'Cancel',
-        icon: 'close',
-        role: 'cancel'
-      }
-    ];
-    
-    const actionSheet = await this.actionSheetController.create({
-      header: 'Options',
-      buttons
-    });
-    
-    await actionSheet.present();
-  }
-    navigateToPage(page: string) {
-    this.navCtrl.navigateForward(page);
-  }  // Toggle play/pause for a track
+  
   togglePlayTrack(track: Track): void {
     this.mediaPlayerService.togglePlayTrack(track);
   }
 
-  // Check if a track is currently playing
   isCurrentlyPlaying(track: Track): boolean {
     return this.mediaPlayerService.isCurrentlyPlaying(track);
-  }
-  // Add a helper method to show toast messages
-  async showToast(message: string, color: string = 'success') {
-    await this.dataService.showToast(message, color);
   }
 }

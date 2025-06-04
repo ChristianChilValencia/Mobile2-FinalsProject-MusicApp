@@ -37,7 +37,6 @@ export class MediaPlayerService {
   private queueIndex = 0;
   private timerId: any;
   private _currentBlobUrl: string | null = null;
-  private _trackReady = false;
   private volume = 1.0;
   private isShuffleActive = false;
   private repeatMode: RepeatMode = RepeatMode.None;
@@ -64,7 +63,6 @@ export class MediaPlayerService {
     this.configureAudioElement(this.localAudioPlayer);
     this.setupAudioEvents();
 
-    // Set up state change subscriptions
     this.currentTrack$.subscribe(() => this.updatePlaybackState());
     this.isPlaying$.subscribe(() => this.updatePlaybackState());
     this.currentTime$.subscribe(() => this.updatePlaybackState());
@@ -83,7 +81,6 @@ export class MediaPlayerService {
       player.addEventListener('loadedmetadata', () => {
         const isStreamedTrack = player === this.audioPlayer && !this.currentTrack$.getValue()?.isLocal;
         this.duration$.next(isStreamedTrack ? 30 : player.duration);
-        this._trackReady = true;
         this.updatePlaybackState();
       });
 
@@ -105,7 +102,6 @@ export class MediaPlayerService {
 
       player.addEventListener('play', () => {
         this.isPlaying$.next(true);
-        this.startUpdates();
         this.updatePlaybackState();
       });
 
@@ -118,7 +114,6 @@ export class MediaPlayerService {
       player.addEventListener('ended', async () => {
         const currentTrack = this.currentTrack$.getValue();
         if (currentTrack) {
-          // Handle repeat modes
           if (this.repeatMode === RepeatMode.One && currentTrack) {
             await this.play(currentTrack);
           } else if (this.repeatMode === RepeatMode.All || this.queue.length > 0) {
@@ -136,17 +131,6 @@ export class MediaPlayerService {
         this.updatePlaybackState();
       });
     });
-  }
-
-  private startUpdates() {
-    this.stopUpdates();
-    this.timerId = setInterval(() => {
-      const activePlayer = this.getCurrentPlayer();
-      if (activePlayer && !activePlayer.paused) {
-        this.currentTime$.next(activePlayer.currentTime);
-        this.updatePlaybackState();
-      }
-    }, 250); // Reduced interval for smoother updates
   }
 
   private stopUpdates() {
@@ -176,7 +160,6 @@ export class MediaPlayerService {
       this.currentTrack$.next(track);
       this.updatePlaybackState();
 
-      // Update track metadata
       const now = new Date().toISOString();
       const trackToSave: Track = {
         ...track,
@@ -187,28 +170,23 @@ export class MediaPlayerService {
         title: track.title || 'Unknown Title',
         artist: track.artist || 'Unknown Artist'
       };      try {
-        // Save track metadata
         await this.dataService.saveTracks([trackToSave]);
       } catch (error) {
         console.error('Error saving track metadata:', error);
-        // Continue playing even if metadata save fails
       }
 
-      // Set up audio source
       const player = track.isLocal ? this.localAudioPlayer : this.audioPlayer;
       const audioSrc = this.platform.is('hybrid') ? 
         Capacitor.convertFileSrc(track.previewUrl) : 
         track.previewUrl;
 
       try {
-        // Load and play the track
         console.log(`Playing ${track.isLocal ? 'local' : 'streaming'} file:`, audioSrc);
         player.src = audioSrc;
         player.load();
         await player.play();
         
         this.isPlaying$.next(true);
-        this.startUpdates();
         await this.dataService.set('last_played_track', track);
       } catch (error) {
         console.error('Error playing track:', error);
@@ -220,29 +198,6 @@ export class MediaPlayerService {
       this.cleanup();
       throw error;
     }
-  }
-
-  private base64ToBlob(data: string | ArrayBuffer, mimeType: string): Blob {
-    let base64String: string;
-    if (typeof data === 'string') {
-      base64String = data;
-    } else {
-      base64String = this.arrayBufferToBase64(data);
-    }
-
-    const byteCharacters = atob(base64String);
-    const byteArrays = [];
-
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-      const slice = byteCharacters.slice(offset, offset + 512);
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-    }
-    return new Blob(byteArrays, { type: mimeType });
   }
 
   async pause(): Promise<void> {
@@ -273,7 +228,6 @@ export class MediaPlayerService {
       try {
         await activePlayer.play();
         this.isPlaying$.next(true);
-        this.startUpdates();
       } catch (playError) {
         throw playError;
       }
@@ -314,23 +268,6 @@ export class MediaPlayerService {
     await this.play(nextTrack);
   }
 
-  async previous(): Promise<void> {
-    this.cleanup();
-    if (!this.queue.length) return;
-
-    const activePlayer = this.getCurrentPlayer();
-    
-    if (activePlayer.currentTime > 3) {
-      activePlayer.currentTime = 0;
-    } else {
-      this.queueIndex = (this.queueIndex - 1 + this.queue.length) % this.queue.length;
-      
-      const prevTrack = this.queue[this.queueIndex];
-      
-      await this.play(prevTrack);
-    }
-  }
-
   seek(time: number): void {
     const activePlayer = this.getCurrentPlayer();
     activePlayer.currentTime = time;
@@ -350,18 +287,24 @@ export class MediaPlayerService {
     }
     
     this._savedPosition = undefined;
-    this._trackReady = false;
     this.updatePlaybackState();
   }
 
   async addLocalTrack(file: File): Promise<Track> {
     try {
       const validTypes = [
-        'audio/mpeg', 'audio/mp3',
-        'audio/wav', 'audio/x-wav',
-        'audio/ogg', 'audio/vorbis',
-        'audio/aac', 'audio/x-m4a', 'audio/mp4', 'audio/m4a',
-        'audio/flac', 'audio/x-flac',
+        'audio/mpeg', 
+        'audio/mp3',
+        'audio/wav',
+        'audio/x-wav',
+        'audio/ogg',
+        'audio/vorbis',
+        'audio/aac',
+        'audio/x-m4a',
+        'audio/mp4',
+        'audio/m4a',
+        'audio/flac',
+        'audio/x-flac',
         'audio/opus'
       ];
       const isValidType = validTypes.some(type => file.type.toLowerCase() === type.toLowerCase());
@@ -432,18 +375,15 @@ export class MediaPlayerService {
         trackUri = URL.createObjectURL(file);
       }
 
-      // Extract metadata and title from filename
       let rawTitle = inputFileName.replace(/\.[^/.]+$/, '');
-      // Remove common prefixes/numbers
       rawTitle = rawTitle.replace(/^\d+[\s.-]+/, '').trim();
-      // Try to extract artist if format is "Artist - Title"
       let trackArtist = 'Unknown Artist';
       let trackTitle = rawTitle;
       if (rawTitle.includes(' - ')) {
         const parts = rawTitle.split(' - ');
         trackArtist = parts[0].trim();
         trackTitle = parts[1].trim();
-      }      // Create track object
+      }
       const trackDuration = await this.getAudioDuration(file);
       const track: Track = {
         id: trackId,
@@ -461,11 +401,8 @@ export class MediaPlayerService {
         artwork: 'assets/placeholder-player.png',
         pathOrUrl: trackUri
       };
-
-      // Save track metadata
       await this.dataService.saveLocalMusic(track, trackFilePath);
       return track;
-
     } catch (error) {
       console.error('Error adding local track:', error);
       throw error;
@@ -525,35 +462,6 @@ export class MediaPlayerService {
     }
   }
 
-  async clearCurrentTrack(): Promise<void> {
-    try {      
-      await this.pause();
-      this.currentTrack$.next(null);
-      this.isPlaying$.next(false);
-      this.currentTime$.next(0);
-      this.duration$.next(0);
-      this.updatePlaybackState();
-      this.audioPlayer.src = '';
-      this.audioPlayer.currentTime = 0;
-      this.localAudioPlayer.src = '';
-      this.localAudioPlayer.currentTime = 0;
-      this._savedPosition = undefined;
-      await this.dataService.set('last_played_track', null);
-    } catch (error) {
-      console.error('Error clearing current track:', error);
-    }
-  }
-  
-  setShuffle(isActive: boolean): void {
-    this.isShuffleActive = isActive;
-    this.updatePlaybackState();
-  }
-
-  setRepeatMode(mode: RepeatMode): void {
-    this.repeatMode = mode;
-    this.updatePlaybackState();
-  }
-
   private updatePlaybackState(): void {
     this.playbackState$.next({
       isPlaying: this.isPlaying$.value,
@@ -574,11 +482,6 @@ export class MediaPlayerService {
   getDuration(): Observable<number> { return this.duration$.asObservable(); }
   getPlaybackState(): Observable<PlaybackState> { return this.playbackState$.asObservable(); }
 
-  /**
-   * Checks if a track is currently playing
-   * @param track The track to check
-   * @returns True if the track is currently playing
-   */
   isCurrentlyPlaying(track: Track): boolean {
     const state = this.playbackState$.getValue();
     return (
@@ -587,20 +490,11 @@ export class MediaPlayerService {
     );
   }
   
-  /**
-   * Toggles play/pause for a specific track
-   * If it's the current track, toggles play state
-   * If it's a different track, plays that track
-   * @param track The track to toggle
-   */
   async togglePlayTrack(track: Track): Promise<void> {
     const currentState = this.playbackState$.getValue();
-    
     if (currentState.currentTrack?.id === track.id) {
-      // The track is already the current track, toggle play/pause
       this.togglePlay();
     } else {
-      // It's a different track, start playing it
       await this.play(track);
     }
   }

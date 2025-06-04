@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { DataService, Track } from './data.service';
 
-// Add DeezerTrack interface
 export interface DeezerTrack {
   id: number;
   title: string;
@@ -18,9 +17,7 @@ export interface DeezerTrack {
   album: {
     id: number;
     title: string;
-    cover_small: string;
     cover_medium: string;
-    cover_big: string;
   };
 }
 
@@ -95,19 +92,14 @@ export class DeezerService {
     }),
     catchError(this.handleError<DeezerTrack[]>('searchExploreTerms', []))
   );
-}
+  }
 
   private enhanceTrackData(track: any): DeezerTrack {
-    // Add calculated properties or defaults
     return {
       ...track,
       duration_formatted: this.formatDuration(track.duration || 0),
       album: {
-        ...track.album,
-        cover_small: track.album?.cover_small || this.getDefaultCoverUrl('small'),
-        cover_medium: track.album?.cover_medium || this.getDefaultCoverUrl('medium'),
-        cover_big: track.album?.cover_big || this.getDefaultCoverUrl('big')
-      }
+        ...track.album,      }
     };
   }
 
@@ -115,11 +107,6 @@ export class DeezerService {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-  }
-
-  private getDefaultCoverUrl(size: 'small' | 'medium' | 'big'): string {
-    const placeholder = 'assets/placeholder-player.png';
-    return placeholder;
   }
 
   private handleError<T>(operation = 'operation', result?: T) {
@@ -147,11 +134,6 @@ export class DeezerService {
     };
   }
 
-  /**
-   * Add a new track to the DataService from Deezer API result
-   * @param track The Deezer track to add
-   * @returns The saved Track object
-   */
   async addDeezerTrackToLibrary(track: DeezerTrack): Promise<Track> {
     const mappedTrack = this.mapDeezerTrackToTrack(track);
     try {
@@ -159,10 +141,8 @@ export class DeezerService {
       const existingTrack = allTracks.find((t: Track) => t.id === mappedTrack.id);
       
       if (!existingTrack) {
-        // Add new track to collection
         await this.dataService.saveTracks([...allTracks, mappedTrack]);
       } else {
-        // Update existing track
         const updatedTracks = allTracks.map((t: Track) => 
           t.id === mappedTrack.id ? mappedTrack : t
         );

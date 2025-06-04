@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ActionSheetController, ToastController, NavController, AlertController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { DataService, PlaybackState, Track } from '../../services/data.service';
+import { DataService, PlaybackState } from '../../services/data.service';
 
 @Component({
   selector: 'app-player',
@@ -13,9 +13,6 @@ import { DataService, PlaybackState, Track } from '../../services/data.service';
 export class PlayerPage implements OnInit, OnDestroy {
   playbackState: PlaybackState | null = null;
   playbackSubscription: Subscription | null = null;
-  isShuffleOn = false;
-  seekValue: number = 0;
-  isShuffleActive: boolean = false;  
   
   constructor(
     private mediaPlayerService: MediaPlayerService,
@@ -57,10 +54,6 @@ export class PlayerPage implements OnInit, OnDestroy {
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   }
-
-  async addToPlaylist(track: Track) {
-    await this.dataService.showAddToPlaylistOptions(track);
-  }
   
   skipForward() {
     if (this.playbackState && this.playbackState.currentTrack) {
@@ -79,14 +72,6 @@ export class PlayerPage implements OnInit, OnDestroy {
     }
   }
 
-  next() {
-    this.mediaPlayerService.next();
-  }
-  
-  previous() {
-    this.mediaPlayerService.previous();
-  }
-
   closePlayer() {
     this.navCtrl.back();
   }
@@ -97,9 +82,5 @@ export class PlayerPage implements OnInit, OnDestroy {
     } else {
       this.dataService.showToast('No track is currently playing', 'warning');
     }
-  }
-  
-  async createNewPlaylistWithTrack(track: Track) {
-    await this.dataService.createCustomPlaylistWithTrack(track);
   }
 }

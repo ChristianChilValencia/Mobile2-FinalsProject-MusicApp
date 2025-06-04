@@ -1,9 +1,10 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>    <ion-buttons slot="start">
+  <ion-toolbar>    
+    <ion-buttons slot="start">
       <ion-back-button defaultHref="/tabs/library"></ion-back-button>
     </ion-buttons>    <ion-title>{{ playlist?.name || 'Playlist' }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="presentPlaylistOptions()">
+      <ion-button (click)="presentActionSheet()">
         <ion-icon slot="icon-only" name="ellipsis-vertical"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -11,18 +12,16 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <input #coverArtInput type="file" accept="image/*" style="display:none" (change)="onCoverArtSelected($event)">
   <div class="playlist-container">
-    <!-- Playlist header -->
      <div class="playlist-header" *ngIf="playlist">
       <div class="playlist-cover" (click)="triggerCoverArtUpload()">
         <img [src]="playlist.coverArt || (playlistTracks.length > 0 ? (playlistTracks[0].artwork || playlistTracks[0].imageUrl) : 'assets/placeholder-playlist.png')" alt="Playlist Cover">
       </div>
+      
       <div class="playlist-info">
         <h1>{{ playlist.name }}</h1>
         <p *ngIf="playlist.description">{{ playlist.description }}</p>
         <p class="stats">{{ playlistTracks.length }} tracks · {{ getTotalDuration() }}</p>
-        
         <div class="action-buttons">
           <ion-button expand="block" (click)="playAll()" [disabled]="playlistTracks.length === 0">
             <ion-icon slot="start" name="play"></ion-icon>
@@ -36,7 +35,6 @@
       </div>
     </div>
     
-    <!-- Empty state -->
     <div class="empty-state" *ngIf="playlistTracks.length === 0 && playlist">
       <ion-icon name="musical-notes"></ion-icon>
       <h3>No Tracks in Playlist</h3>
@@ -47,7 +45,6 @@
       </ion-button>
     </div>
     
-    <!-- Tracks list -->
     <ion-list *ngIf="playlistTracks.length > 0">
       <ion-reorder-group [disabled]="!isReordering" (ionItemReorder)="handleReorder($event)">        <ion-item-sliding *ngFor="let track of playlistTracks; let i = index">
           <ion-item button detail="false" (click)="playTrack(track, i)">
@@ -61,14 +58,13 @@
             </ion-label>
             
             <div class="item-actions" slot="end">
-            <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
-              <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" (click)="showAddToPlaylistOptions(track); $event.stopPropagation()">
-              <ion-icon slot="icon-only" name="add"></ion-icon>
-            </ion-button>
-          </div>
-
+              <ion-button fill="clear" (click)="togglePlayTrack(track); $event.stopPropagation()">
+                <ion-icon slot="icon-only" [name]="isCurrentlyPlaying(track) ? 'pause' : 'play'"></ion-icon>
+              </ion-button>
+              <ion-button fill="clear" (click)="showAddToPlaylistOptions(track); $event.stopPropagation()">
+                <ion-icon slot="icon-only" name="add"></ion-icon>
+              </ion-button>
+            </div>
             <ion-reorder slot="end"></ion-reorder>
           </ion-item>
           

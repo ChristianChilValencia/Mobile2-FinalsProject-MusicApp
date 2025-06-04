@@ -1,11 +1,11 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastController, LoadingController, Platform, ActionSheetController, AlertController } from '@ionic/angular';
+import { ToastController, LoadingController, AlertController } from '@ionic/angular';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService as LocalDataService, Track } from '../../services/data.service';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Filesystem } from '@capacitor/filesystem';
 
 @Component({
   selector: 'app-uploads',
@@ -27,7 +27,6 @@ export class UploadsPage implements OnInit, OnDestroy {
     public router: Router,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
-    private actionSheetCtrl: ActionSheetController,
     private alertCtrl: AlertController
   ) {}
 
@@ -47,6 +46,7 @@ export class UploadsPage implements OnInit, OnDestroy {
       this.playbackSubscription = null;
     }
   }
+  
   async doRefresh(event: any) {
     try {
       await this.refreshLocalMusic();
@@ -63,15 +63,12 @@ export class UploadsPage implements OnInit, OnDestroy {
   
   private async refreshLocalMusic() {
     try {
-      const allTracks = await this.dataService.getAllTracks();
-      const localTracks = allTracks.filter(track => track.source === 'local' && track.isLocal === true);
-      
-      this.localMusic = localTracks.sort((a, b) => {
+      const allTracks = await this.dataService.getAllTracks();      
+      this.localMusic = allTracks.sort((a, b) => {
         const dateA = new Date(a.addedAt || 0).getTime();
         const dateB = new Date(b.addedAt || 0).getTime();
         return dateB - dateA; 
       });
-      
       return this.localMusic;
     } catch (error) {
       console.error('Error refreshing local music:', error);
@@ -91,6 +88,7 @@ export class UploadsPage implements OnInit, OnDestroy {
     }
     return true; 
   }
+
   async openFileSelector() {
     const hasPermissions = await this.requestAudioPermissions();
     if (!hasPermissions) {
@@ -156,6 +154,7 @@ export class UploadsPage implements OnInit, OnDestroy {
       input.value = '';
     }
   }  
+
   async playTrack(track: Track) {
     try {
       await this.audioService.setQueue([track], 0);
@@ -165,10 +164,12 @@ export class UploadsPage implements OnInit, OnDestroy {
       await this.dataService.showToast('Failed to play track', 'danger');
     }
   }
+
   isCurrentlyPlaying(track: Track): boolean {
     return this.audioService.isCurrentlyPlaying(track);
   }
-    async togglePlayTrack(track: Track): Promise<void> {
+    
+  async togglePlayTrack(track: Track): Promise<void> {
     try {
       await this.audioService.togglePlayTrack(track);
       if (!this.currentPlaybackState?.isPlaying) {
@@ -179,11 +180,9 @@ export class UploadsPage implements OnInit, OnDestroy {
       await this.dataService.showToast('Failed to play track', 'danger');
     }
   }
+
   async addToPlaylist(track: Track) {
     await this.dataService.showAddToPlaylistOptions(track);
-  }
-    async createCustomPlaylist(track: Track) {
-    await this.dataService.createCustomPlaylistWithTrack(track);
   }
   
   async deleteTrack(track: Track) {
@@ -214,7 +213,5 @@ export class UploadsPage implements OnInit, OnDestroy {
     });
     
     await alert.present();
-  }  async createArtistMix(track: Track) {
-    await this.dataService.createArtistMixWithTrack(track);
   }
 }
